@@ -1,4 +1,4 @@
-import type { Member, Shift } from "./schemas";
+import type { Shift, Workplace } from "./schemas";
 import { spanMinutes, toMinutes } from "./time";
 
 type ShiftTime = Pick<Shift, "date" | "startTime" | "endTime">;
@@ -22,43 +22,47 @@ export function isOverlapping(a: ShiftTime, b: ShiftTime): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 
-/** 同じメンバーに重複して割り当てられているシフトの組を返す */
-export function findConflicts(shifts: readonly Shift[]): Array<[Shift, Shift]> {
-  const conflicts: Array<[Shift, Shift]> = [];
+/** 時間が重なっているシフトの組を返す（掛け持ち先どうしのダブルブッキング検出） */
+export function findConflicts<T extends ShiftTime>(shifts: readonly T[]): Array<[T, T]> {
+  const conflicts: Array<[T, T]> = [];
   for (let i = 0; i < shifts.length; i++) {
     for (let j = i + 1; j < shifts.length; j++) {
       const a = shifts[i];
       const b = shifts[j];
-      if (a && b && a.memberId === b.memberId && isOverlapping(a, b)) {
-        conflicts.push([a, b]);
-      }
+      if (a && b && isOverlapping(a, b)) conflicts.push([a, b]);
     }
   }
   return conflicts;
 }
 
-export interface MemberSummary {
-  memberId: string;
+/** 日付・開始時刻の順に並べる */
+export function sortShifts<T extends ShiftTime>(shifts: readonly T[]): T[] {
+  return [...shifts].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime),
+  );
+}
+
+export interface WorkplaceSummary {
+  workplaceId: string;
   shiftCount: number;
   workingMinutes: number;
   /** 時給未設定の場合は null */
   estimatedPay: number | null;
 }
 
-/** メンバーごとの勤務回数・実働時間・概算給与を集計する */
-export function summarizeByMember(
+/** 勤務先ごとの勤務回数・実働時間・概算給与を集計する */
+export function summarizeByWorkplace(
   shifts: readonly Shift[],
-  members: readonly Member[],
-): MemberSummary[] {
-  return members.map((member) => {
-    const own = shifts.filter((s) => s.memberId === member.id);
+  workplaces: readonly Workplace[],
+): WorkplaceSummary[] {
+  return workplaces.map((wp) => {
+    const own = shifts.filter((s) => s.workplaceId === wp.id);
     const minutes = own.reduce((sum, s) => sum + workingMinutes(s), 0);
     return {
-      memberId: member.id,
+      workplaceId: wp.id,
       shiftCount: own.length,
       workingMinutes: minutes,
-      estimatedPay:
-        member.hourlyWage === null ? null : Math.round((member.hourlyWage * minutes) / 60),
+      estimatedPay: wp.hourlyWage === null ? null : Math.round((wp.hourlyWage * minutes) / 60),
     };
   });
 }

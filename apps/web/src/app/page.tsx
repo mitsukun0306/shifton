@@ -1,82 +1,31 @@
-import {
-  findConflicts,
-  formatDuration,
-  sampleMembers,
-  sampleShifts,
-  sampleStore,
-  summarizeByMember,
-  workingMinutes,
-} from "@shifton/core";
-
-const memberName = new Map(sampleMembers.map((m) => [m.id, m.displayName]));
+import Link from "next/link";
 
 export default function Home() {
-  const dates = [...new Set(sampleShifts.map((s) => s.date))].sort();
-  const summaries = summarizeByMember(sampleShifts, sampleMembers);
-  const conflicts = findConflicts(sampleShifts);
-
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
-      <header className="mb-8">
-        <p className="text-sm font-medium text-sky-600">しふとん！</p>
-        <h1 className="text-2xl font-bold">{sampleStore.name} のシフト</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          ※ 現在はサンプルデータを表示しています。
-          {conflicts.length > 0 && ` 重複シフトが ${conflicts.length} 件あります。`}
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-4 py-16 text-center">
+      <div>
+        <h1 className="text-4xl font-bold">しふとん！</h1>
+        <p className="mt-3 text-slate-500">
+          バイト先から届いたシフトを取り込んで、自分の予定をまとめて管理。掛け持ちでも重なりをすぐに確認できます。
         </p>
-      </header>
-
-      <section className="space-y-6">
-        {dates.map((date) => (
-          <div key={date}>
-            <h2 className="mb-2 font-semibold">{date}</h2>
-            <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
-              {sampleShifts
-                .filter((s) => s.date === date)
-                .map((s) => (
-                  <li key={s.id} className="flex items-center justify-between px-4 py-3">
-                    <span>{memberName.get(s.memberId)}</span>
-                    <span className="tabular-nums">
-                      {s.startTime}〜{s.endTime}
-                      <span className="ml-3 text-sm text-slate-500">
-                        実働 {formatDuration(workingMinutes(s))}
-                      </span>
-                      {s.status === "draft" && (
-                        <span className="ml-3 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                          下書き
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-10">
-        <h2 className="mb-2 font-semibold">メンバー別集計</h2>
-        <table className="w-full text-left text-sm">
-          <thead className="text-slate-500">
-            <tr>
-              <th className="py-2">名前</th>
-              <th>回数</th>
-              <th>実働</th>
-              <th>概算給与</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summaries.map((s) => (
-              <tr key={s.memberId} className="border-t border-slate-200 dark:border-slate-800">
-                <td className="py-2">{memberName.get(s.memberId)}</td>
-                <td>{s.shiftCount}</td>
-                <td>{formatDuration(s.workingMinutes)}</td>
-                <td>{s.estimatedPay === null ? "—" : `¥${s.estimatedPay.toLocaleString()}`}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      </div>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link
+          href="/signup"
+          className="rounded-md bg-sky-600 px-5 py-2.5 font-medium text-white hover:bg-sky-700"
+        >
+          無料で始める
+        </Link>
+        <Link
+          href="/login"
+          className="rounded-md border border-slate-300 px-5 py-2.5 font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          ログイン
+        </Link>
+      </div>
+      <Link href="/demo" className="text-sm text-sky-600 underline">
+        サンプルのシフト表を見る
+      </Link>
     </main>
   );
 }

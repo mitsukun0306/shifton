@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, fromMinutes, spanMinutes, toMinutes } from "./time";
+import {
+  addDays,
+  formatDateJa,
+  formatDuration,
+  fromMinutes,
+  spanMinutes,
+  todayIn,
+  toMinutes,
+} from "./time";
 
 describe("time", () => {
   it("HH:mm と分を相互変換できる", () => {
@@ -17,5 +25,21 @@ describe("time", () => {
     expect(formatDuration(45)).toBe("45分");
     expect(formatDuration(120)).toBe("2時間");
     expect(formatDuration(450)).toBe("7時間30分");
+  });
+});
+
+describe("date", () => {
+  it("日本時間の今日を求める", () => {
+    // UTC 2026-11-30 16:00 は日本時間 12/1 1:00
+    expect(todayIn("Asia/Tokyo", new Date("2026-11-30T16:00:00Z"))).toBe("2026-12-01");
+  });
+
+  it("日付を加算する（月またぎ）", () => {
+    expect(addDays("2026-11-30", 1)).toBe("2026-12-01");
+    expect(addDays("2026-12-01", -1)).toBe("2026-11-30");
+  });
+
+  it("日本語の日付表記にする", () => {
+    expect(formatDateJa("2026-12-01")).toBe("12月1日(火)");
   });
 });

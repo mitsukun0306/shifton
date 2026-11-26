@@ -21,8 +21,8 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="requests">
-        <NativeTabs.Trigger.Label>希望提出</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="add">
+        <NativeTabs.Trigger.Label>追加</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require("@/assets/images/tabIcons/explore.png")}
           renderingMode="template"

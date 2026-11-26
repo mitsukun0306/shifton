@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "しふとん！",
-  description: "アルバイトのシフト作成・共有・希望提出をまとめて管理",
+  description: "アルバイトのための、自分のシフト管理アプリ",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
