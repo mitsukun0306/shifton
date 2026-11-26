@@ -140,7 +140,7 @@ export default function ReadScreen() {
             </ErrorText>
           ) : workplaces?.length === 0 ? (
             <ThemedText themeColor="textSecondary">
-              先に「追加」タブで勤務先を登録してください。
+              先に「カレンダー」タブで勤務先を登録してください。
             </ThemedText>
           ) : (
             <>

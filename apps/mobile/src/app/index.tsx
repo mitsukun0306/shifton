@@ -73,7 +73,7 @@ export default function HomeScreen() {
             <ThemedView style={styles.section}>
               <ThemedText type="subtitle">まずは勤務先を登録</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                掛け持ちしている場合は、あとから「追加」タブで増やせます。
+                掛け持ちしている場合は、あとから「カレンダー」タブで増やせます。
               </ThemedText>
               <WorkplaceForm onCreated={reload} />
             </ThemedView>
@@ -87,7 +87,8 @@ export default function HomeScreen() {
               )}
               {shifts.length === 0 && (
                 <ThemedText themeColor="textSecondary">
-                  今後{UPCOMING_DAYS}日間のシフトはまだありません。「追加」タブから登録できます。
+                  今後{UPCOMING_DAYS}
+                  日間のシフトはまだありません。「カレンダー」タブから登録できます。
                 </ThemedText>
               )}
               {dates.map((date) => (

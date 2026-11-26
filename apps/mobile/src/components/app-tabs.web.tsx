@@ -26,7 +26,7 @@ export default function AppTabs() {
             <TabButton>読み取り</TabButton>
           </TabTrigger>
           <TabTrigger name="add" href="/add" asChild>
-            <TabButton>追加</TabButton>
+            <TabButton>カレンダー</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

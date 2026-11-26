@@ -30,7 +30,7 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="add">
-        <NativeTabs.Trigger.Label>追加</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>カレンダー</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require("@/assets/images/tabIcons/explore.png")}
           renderingMode="template"

@@ -1,12 +1,13 @@
 import { fetchShifts, fetchWorkplaces } from "@shifton/api";
 import {
   addDays,
-  findConflicts,
-  formatDateJa,
   formatDuration,
+  formatMonthJa,
+  gridRange,
+  isYearMonth,
+  monthOf,
   summarizeByWorkplace,
   todayIn,
-  workingMinutes,
 } from "@shifton/core";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,23 +16,23 @@ import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
 import { Card } from "@/components/ui";
 import { getCurrentUser } from "@/lib/supabase/server";
-import { deleteShiftAction } from "./actions";
-import { ShiftForm, WorkplaceForm } from "./forms";
+import { WorkplaceForm } from "./forms";
+import { ShiftCalendar } from "./shift-calendar";
 
-/** 一覧に表示する期間（今日から何日先まで） */
-const UPCOMING_DAYS = 30;
+/** よく入る時間帯を提案するために、何日前までのシフトを見るか */
+const PRESET_LOOKBACK_DAYS = 90;
 
-export default function DashboardPage() {
+export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
       <Suspense fallback={<p className="text-slate-500">読み込み中…</p>}>
-        <Dashboard />
+        <Dashboard searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Dashboard() {
+async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "searchParams">) {
   // 「今日」の日付やログイン状態はアクセスのたびに変わるため、事前レンダリングせずリクエスト時に描画する
   await connection();
   const current = await getCurrentUser();
@@ -39,15 +40,24 @@ async function Dashboard() {
   const { supabase, user } = current;
 
   const today = todayIn();
-  const until = addDays(today, UPCOMING_DAYS);
-  const [workplaces, shifts] = await Promise.all([
+  const requested = (await searchParams).month;
+  const month = isYearMonth(requested) ? requested : monthOf(today);
+  const range = gridRange(month);
+  const lookbackFrom = addDays(today, -PRESET_LOOKBACK_DAYS);
+  const [workplaces, fetched] = await Promise.all([
     fetchWorkplaces(supabase),
-    fetchShifts(supabase, { from: today, to: until }),
+    fetchShifts(supabase, {
+      from: [lookbackFrom, range.from].sort()[0] ?? range.from,
+      to: [today, range.to].sort()[1] ?? range.to,
+    }),
   ]);
+  const shifts = fetched.filter((s) => s.date >= range.from && s.date <= range.to);
+  const recentShifts = fetched.filter((s) => s.date >= lookbackFrom && s.date <= today);
   const workplaceById = new Map(workplaces.map((wp) => [wp.id, wp]));
-  const conflictIds = new Set(findConflicts(shifts).flatMap(([a, b]) => [a.id, b.id]));
-  const summaries = summarizeByWorkplace(shifts, workplaces);
-  const dates = [...new Set(shifts.map((s) => s.date))];
+  const summaries = summarizeByWorkplace(
+    shifts.filter((s) => monthOf(s.date) === month),
+    workplaces,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,71 +92,17 @@ async function Dashboard() {
           </Link>
 
           <Card>
-            <h1 className="mb-4 text-lg font-bold">これからのシフト</h1>
-            {conflictIds.size > 0 && (
-              <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-                時間が重なっているシフトがあります。勤務先に確認しましょう。
-              </p>
-            )}
-            {shifts.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                今後{UPCOMING_DAYS}日間のシフトはまだありません。下のフォームから追加できます。
-              </p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {dates.map((date) => (
-                  <section key={date}>
-                    <h2 className="mb-1 text-sm font-semibold text-slate-500">
-                      {date === today ? "今日 " : ""}
-                      {formatDateJa(date)}
-                    </h2>
-                    <ul className="flex flex-col gap-2">
-                      {shifts
-                        .filter((s) => s.date === date)
-                        .map((s) => {
-                          const wp = workplaceById.get(s.workplaceId);
-                          return (
-                            <li
-                              key={s.id}
-                              className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800"
-                              style={{ borderLeft: `4px solid ${wp?.color ?? "#94a3b8"}` }}
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium tabular-nums">
-                                  {s.startTime}〜{s.endTime}
-                                  <span className="ml-2 text-sm font-normal text-slate-500">
-                                    {wp?.name}・実働 {formatDuration(workingMinutes(s))}
-                                  </span>
-                                </p>
-                                {s.note && <p className="text-sm text-slate-500">{s.note}</p>}
-                                {conflictIds.has(s.id) && (
-                                  <p className="text-sm text-red-600">
-                                    ⚠ 他のシフトと重なっています
-                                  </p>
-                                )}
-                              </div>
-                              <form action={deleteShiftAction}>
-                                <input type="hidden" name="id" value={s.id} />
-                                <button
-                                  type="submit"
-                                  className="text-sm text-slate-400 hover:text-red-600"
-                                  aria-label="このシフトを削除"
-                                >
-                                  削除
-                                </button>
-                              </form>
-                            </li>
-                          );
-                        })}
-                    </ul>
-                  </section>
-                ))}
-              </div>
-            )}
+            <ShiftCalendar
+              month={month}
+              today={today}
+              workplaces={workplaces}
+              shifts={shifts}
+              recentShifts={recentShifts}
+            />
           </Card>
 
           <Card>
-            <h2 className="mb-4 text-lg font-bold">今後{UPCOMING_DAYS}日間の合計</h2>
+            <h2 className="mb-4 text-lg font-bold">{formatMonthJa(month)}の合計</h2>
             <ul className="flex flex-col gap-2 text-sm">
               {summaries.map((sum) => {
                 const wp = workplaceById.get(sum.workplaceId);
@@ -167,11 +123,6 @@ async function Dashboard() {
                 );
               })}
             </ul>
-          </Card>
-
-          <Card>
-            <h2 className="mb-4 text-lg font-bold">シフトを追加</h2>
-            <ShiftForm workplaces={workplaces} today={today} />
           </Card>
 
           <details className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
