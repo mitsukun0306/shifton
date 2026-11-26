@@ -43,13 +43,20 @@ pnpm dev:mobile
 
 ## つながらないとき
 
-| 症状 | 対処 |
-| --- | --- |
-| QR を読んでも「Could not connect」などと出る | パソコンとスマホが同じ Wi-Fi か確認します。 |
-| 初回起動時に「Windows セキュリティの重要な警告」が出た | 「プライベート ネットワーク」にチェックを入れて「アクセスを許可する」を押します。閉じてしまった場合は、Windows の設定で Wi-Fi のネットワーク プロファイルを「プライベート」にし、ファイアウォールで Node.js を許可します。 |
-| それでもつながらない | `pnpm dev:mobile --tunnel` で起動すると、インターネット経由でつながります（初回はツールの追加を聞かれるので `Y`）。ただしこの方法では、写真の読み取り機能（パソコンの Web 版サーバーを使う）は動きません。 |
-| 写真の読み取りで「サーバーに接続できません」 | 1つ目の PowerShell で `pnpm dev:web` が動いているか確認します。`apps/web/.env.local` に `ANTHROPIC_API_KEY` も必要です（[shift-reader-setup.md](shift-reader-setup.md)）。 |
-| `.env` を変えたのに反映されない | `Ctrl + C` で止めて、`pnpm dev:mobile --clear` で起動し直します。 |
+**QR を読んでも「Could not connect」などと出る**
+パソコンとスマホが同じ Wi-Fi か確認します。
+
+**初回起動時に「Windows セキュリティの重要な警告」が出た**
+「プライベート ネットワーク」にチェックを入れて「アクセスを許可する」を押します。閉じてしまった場合は、Windows の設定で Wi-Fi のネットワーク プロファイルを「プライベート」にし、ファイアウォールで Node.js を許可します。
+
+**それでもつながらない**
+`pnpm dev:mobile --tunnel` で起動すると、インターネット経由でつながります（初回はツールの追加を聞かれるので `Y`）。ただしこの方法では、写真の読み取り機能（パソコンの Web 版サーバーを使う）は動きません。
+
+**写真の読み取りで「サーバーに接続できません」**
+1つ目の PowerShell で `pnpm dev:web` が動いているか確認します。`apps/web/.env.local` に `ANTHROPIC_API_KEY` も必要です（[shift-reader-setup.md](shift-reader-setup.md)）。
+
+**`.env` を変えたのに反映されない**
+`Ctrl + C` で止めて、`pnpm dev:mobile --clear` で起動し直します。
 
 ## Expo Go で確認できないもの
 
