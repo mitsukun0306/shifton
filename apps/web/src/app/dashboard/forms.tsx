@@ -1,14 +1,20 @@
 "use client";
 
 import { workplaceColors } from "@shifton/core";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { Sheet } from "@/components/sheet";
 import { Alert, Button, Field } from "@/components/ui";
 import { type ActionState, createWorkplaceAction } from "./actions";
 
 const initial: ActionState = {};
 
-export function WorkplaceForm() {
+export function WorkplaceForm({ onDone }: { onDone?: () => void } = {}) {
   const [state, formAction, pending] = useActionState(createWorkplaceAction, initial);
+
+  // 登録できたら（ポップアップなら）閉じる
+  useEffect(() => {
+    if (state.ok) onDone?.();
+  }, [state, onDone]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -47,5 +53,20 @@ export function WorkplaceForm() {
         {pending ? "登録中…" : "勤務先を登録する"}
       </Button>
     </form>
+  );
+}
+
+/** 「＋ 勤務先を追加」ボタンと、登録フォームのポップアップ */
+export function AddWorkplaceButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" onClick={() => setOpen(true)}>
+        ＋ 勤務先を追加
+      </Button>
+      <Sheet open={open} onClose={() => setOpen(false)} title="勤務先を追加">
+        <WorkplaceForm onDone={() => setOpen(false)} />
+      </Sheet>
+    </>
   );
 }

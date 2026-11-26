@@ -14,9 +14,17 @@ export default function AppTabs() {
       labelStyle={{ selected: { color: colors.text } }}
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>シフト</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>カレンダー</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require("@/assets/images/tabIcons/home.png")}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="list">
+        <NativeTabs.Trigger.Label>予定</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require("@/assets/images/tabIcons/explore.png")}
           renderingMode="template"
         />
       </NativeTabs.Trigger>
@@ -29,8 +37,8 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="add">
-        <NativeTabs.Trigger.Label>カレンダー</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="workplaces">
+        <NativeTabs.Trigger.Label>勤務先</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require("@/assets/images/tabIcons/explore.png")}
           renderingMode="template"
