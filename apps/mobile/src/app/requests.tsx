@@ -1,9 +1,9 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { MaxContentWidth, Spacing, WebTabBarInset } from "@/constants/theme";
 
 export default function RequestsScreen() {
   return (
@@ -20,5 +20,12 @@ export default function RequestsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: "row", justifyContent: "center" },
-  safeArea: { flex: 1, maxWidth: MaxContentWidth, padding: Spacing.four, gap: Spacing.three },
+  safeArea: {
+    flex: 1,
+    maxWidth: MaxContentWidth,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.four,
+    paddingTop: Platform.OS === "web" ? WebTabBarInset : Spacing.four,
+    gap: Spacing.three,
+  },
 });

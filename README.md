@@ -15,22 +15,23 @@ shifton/
 │   ├── web/        # ブラウザ版（Next.js / Tailwind CSS）
 │   └── mobile/     # スマホ版（Expo / React Native / Expo Router）
 ├── packages/
-│   └── core/       # Web・モバイル共通のドメインモデルとシフト計算ロジック
+│   ├── core/       # Web・モバイル共通のドメインモデルとシフト計算ロジック
+│   └── api/        # Web・モバイル共通の Supabase データアクセス
 ├── supabase/
 │   └── migrations/ # データベーススキーマ（案）
 └── docs/           # 設計ドキュメント
 ```
 
-| 領域                 | 技術                                                                |
-| -------------------- | ------------------------------------------------------------------- |
-| Web                  | Next.js 16（App Router）, React 19, Tailwind CSS 4                  |
-| モバイル             | Expo SDK 58, React Native, Expo Router                              |
-| 共通ロジック         | TypeScript, Zod（入力検証・型定義）                                 |
-| バックエンド（予定） | Supabase（PostgreSQL / 認証 / リアルタイム / 行レベルセキュリティ） |
-| ビルド管理           | pnpm, Turborepo                                                     |
-| Lint / Format        | Biome                                                               |
-| テスト               | Vitest                                                              |
-| CI                   | GitHub Actions                                                      |
+| 領域          | 技術                                                 |
+| ------------- | ---------------------------------------------------- |
+| Web           | Next.js 16（App Router）, React 19, Tailwind CSS 4   |
+| モバイル      | Expo SDK 58, React Native, Expo Router               |
+| 共通ロジック  | TypeScript, Zod（入力検証・型定義）                  |
+| バックエンド  | Supabase（PostgreSQL / 認証 / 行レベルセキュリティ） |
+| ビルド管理    | pnpm, Turborepo                                      |
+| Lint / Format | Biome                                                |
+| テスト        | Vitest                                               |
+| CI            | GitHub Actions                                       |
 
 技術選定の理由や今後の方針は [docs/architecture.md](docs/architecture.md) を参照してください。
 
@@ -40,7 +41,13 @@ shifton/
 
 ```bash
 pnpm install
+```
 
+ログインや店舗作成を使うには Supabase の設定が必要です。
+**はじめての方は [docs/supabase-setup.md](docs/supabase-setup.md) の手順に沿って設定してください。**
+（未設定でもアプリは起動し、`/demo` でサンプルのシフト表を見られます）
+
+```bash
 # ブラウザ版を起動（http://localhost:3000）
 pnpm dev:web
 

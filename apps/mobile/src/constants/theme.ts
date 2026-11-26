@@ -63,3 +63,5 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+/** Web 版で画面上部に表示するタブバーの高さ分の余白 */
+export const WebTabBarInset = 88;
