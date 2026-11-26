@@ -22,8 +22,8 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton>シフト</TabButton>
           </TabTrigger>
-          <TabTrigger name="requests" href="/requests" asChild>
-            <TabButton>希望提出</TabButton>
+          <TabTrigger name="add" href="/add" asChild>
+            <TabButton>追加</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

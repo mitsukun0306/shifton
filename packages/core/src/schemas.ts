@@ -6,65 +6,46 @@ export const timeOfDaySchema = z
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "時刻は HH:mm 形式で入力してください");
 
 /** "YYYY-MM-DD" 形式の日付 */
-export const isoDateSchema = z.iso.date();
+export const isoDateSchema = z.iso.date("日付は YYYY-MM-DD 形式で入力してください");
 
-/** 組織内での役割 */
-export const memberRoleSchema = z.enum(["owner", "manager", "staff"]);
+/** 表示色 "#RRGGBB" */
+export const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, "色の形式が正しくありません");
 
-/** 店舗・事業所 */
-export const storeSchema = z.object({
+/** 勤務先（バイト先）。掛け持ちに対応するため複数登録できる */
+export const workplaceSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "店舗名を入力してください"),
-  timezone: z.string().default("Asia/Tokyo"),
-});
-
-/** 店舗に所属するメンバー（アルバイト・店長など） */
-export const memberSchema = z.object({
-  id: z.string(),
-  storeId: z.string(),
-  displayName: z.string().min(1, "名前を入力してください"),
-  role: memberRoleSchema,
-  /** 時給（円）。未設定の場合は人件費計算の対象外 */
+  name: z.string().trim().min(1, "勤務先の名前を入力してください").max(100),
+  color: colorSchema.default("#0284c7"),
+  /** 時給（円）。未設定なら給与の概算をしない */
   hourlyWage: z.number().int().nonnegative().nullable(),
 });
 
-/** シフトの状態 */
-export const shiftStatusSchema = z.enum(["draft", "published"]);
+/** シフトをどうやって登録したか */
+export const shiftSourceSchema = z.enum(["manual", "image", "file", "import"]);
 
-/** 確定・作成中のシフト */
+/** 自分のシフト */
 export const shiftSchema = z.object({
   id: z.string(),
-  storeId: z.string(),
-  memberId: z.string(),
+  workplaceId: z.string(),
   date: isoDateSchema,
   startTime: timeOfDaySchema,
-  /** 開始時刻より前の場合は日をまたぐ勤務（例: 22:00〜05:00） */
+  /** 開始時刻以前の場合は日をまたぐ勤務（例: 22:00〜05:00） */
   endTime: timeOfDaySchema,
   breakMinutes: z.number().int().nonnegative().default(0),
-  status: shiftStatusSchema.default("draft"),
   note: z.string().optional(),
+  source: shiftSourceSchema.default("manual"),
 });
 
-/** 希望シフトの種別 */
-export const availabilitySchema = z.enum(["preferred", "available", "unavailable"]);
-
-/** スタッフが提出する希望シフト */
-export const shiftRequestSchema = z.object({
-  id: z.string(),
-  storeId: z.string(),
-  memberId: z.string(),
-  date: isoDateSchema,
-  availability: availabilitySchema,
-  startTime: timeOfDaySchema.optional(),
-  endTime: timeOfDaySchema.optional(),
-  note: z.string().optional(),
-});
-
-export type TimeOfDay = z.infer<typeof timeOfDaySchema>;
-export type MemberRole = z.infer<typeof memberRoleSchema>;
-export type Store = z.infer<typeof storeSchema>;
-export type Member = z.infer<typeof memberSchema>;
-export type ShiftStatus = z.infer<typeof shiftStatusSchema>;
+export type Workplace = z.infer<typeof workplaceSchema>;
+export type ShiftSource = z.infer<typeof shiftSourceSchema>;
 export type Shift = z.infer<typeof shiftSchema>;
-export type Availability = z.infer<typeof availabilitySchema>;
-export type ShiftRequest = z.infer<typeof shiftRequestSchema>;
+
+/** 勤務先の色の候補 */
+export const workplaceColors = [
+  "#0284c7",
+  "#16a34a",
+  "#ea580c",
+  "#db2777",
+  "#7c3aed",
+  "#ca8a04",
+] as const;

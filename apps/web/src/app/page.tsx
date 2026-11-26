@@ -6,7 +6,7 @@ export default function Home() {
       <div>
         <h1 className="text-4xl font-bold">しふとん！</h1>
         <p className="mt-3 text-slate-500">
-          アルバイトのシフト作成・共有・希望提出を、ブラウザとスマホでまとめて管理。
+          バイト先から届いたシフトを取り込んで、自分の予定をまとめて管理。掛け持ちでも重なりをすぐに確認できます。
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">

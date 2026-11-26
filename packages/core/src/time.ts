@@ -35,3 +35,24 @@ export function formatDuration(minutes: number): string {
   if (m === 0) return `${h}時間`;
   return `${h}時間${m}分`;
 }
+
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"] as const;
+
+/** 指定タイムゾーンでの今日の日付（YYYY-MM-DD） */
+export function todayIn(timeZone = "Asia/Tokyo", now = new Date()): string {
+  // sv-SE ロケールは YYYY-MM-DD 形式で出力される
+  return now.toLocaleDateString("sv-SE", { timeZone });
+}
+
+/** YYYY-MM-DD に日数を足す */
+export function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** "2026-12-01" → "12月1日(火)" */
+export function formatDateJa(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  return `${d.getUTCMonth() + 1}月${d.getUTCDate()}日(${WEEKDAYS[d.getUTCDay()]})`;
+}

@@ -4,9 +4,7 @@
  * `supabase gen types typescript` で自動生成したものに置き換える。
  */
 
-export type MemberRoleEnum = "owner" | "manager" | "staff";
-export type ShiftStatusEnum = "draft" | "published";
-export type AvailabilityEnum = "preferred" | "available" | "unavailable";
+export type ShiftSourceEnum = "manual" | "image" | "file" | "import";
 
 type Table<Row, Required extends keyof Row> = {
   Row: Row;
@@ -15,71 +13,39 @@ type Table<Row, Required extends keyof Row> = {
   Relationships: [];
 };
 
-export type StoreRow = {
+export type WorkplaceRow = {
   id: string;
+  user_id: string;
   name: string;
-  timezone: string;
-  created_at: string;
-};
-
-export type MemberRow = {
-  id: string;
-  store_id: string;
-  user_id: string | null;
-  display_name: string;
-  role: MemberRoleEnum;
+  color: string;
   hourly_wage: number | null;
   created_at: string;
 };
 
 export type ShiftRow = {
   id: string;
-  store_id: string;
-  member_id: string;
+  user_id: string;
+  workplace_id: string;
   date: string;
+  /** Postgres の time 型は "HH:mm:ss" で返る */
   start_time: string;
   end_time: string;
   break_minutes: number;
-  status: ShiftStatusEnum;
   note: string | null;
+  source: ShiftSourceEnum;
   created_at: string;
   updated_at: string;
-};
-
-export type ShiftRequestRow = {
-  id: string;
-  store_id: string;
-  member_id: string;
-  date: string;
-  availability: AvailabilityEnum;
-  start_time: string | null;
-  end_time: string | null;
-  note: string | null;
-  created_at: string;
 };
 
 export type Database = {
   public: {
     Tables: {
-      stores: Table<StoreRow, "name">;
-      members: Table<MemberRow, "store_id" | "display_name">;
-      shifts: Table<ShiftRow, "store_id" | "member_id" | "date" | "start_time" | "end_time">;
-      shift_requests: Table<ShiftRequestRow, "store_id" | "member_id" | "date" | "availability">;
+      workplaces: Table<WorkplaceRow, "name">;
+      shifts: Table<ShiftRow, "workplace_id" | "date" | "start_time" | "end_time">;
     };
     Views: Record<never, never>;
-    Functions: {
-      create_store: {
-        Args: { store_name: string; owner_name: string };
-        Returns: string;
-      };
-      is_store_member: { Args: { target_store: string }; Returns: boolean };
-      is_store_manager: { Args: { target_store: string }; Returns: boolean };
-    };
-    Enums: {
-      member_role: MemberRoleEnum;
-      shift_status: ShiftStatusEnum;
-      availability: AvailabilityEnum;
-    };
+    Functions: Record<never, never>;
+    Enums: { shift_source: ShiftSourceEnum };
     CompositeTypes: Record<never, never>;
   };
 };

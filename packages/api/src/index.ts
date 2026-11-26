@@ -1,3 +1,5 @@
 export * from "./auth";
+export * from "./client";
 export * from "./database.types";
-export * from "./stores";
+export * from "./shifts";
+export * from "./workplaces";
