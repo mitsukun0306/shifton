@@ -10,6 +10,7 @@ import {
 } from "@shifton/core";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
 import { Card } from "@/components/ui";
@@ -31,6 +32,8 @@ export default function DashboardPage() {
 }
 
 async function Dashboard() {
+  // 「今日」の日付やログイン状態はアクセスのたびに変わるため、事前レンダリングせずリクエスト時に描画する
+  await connection();
   const current = await getCurrentUser();
   if (!current) redirect("/login");
   const { supabase, user } = current;
