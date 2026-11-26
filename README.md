@@ -4,8 +4,8 @@
 掛け持ちしていても、勤務先ごとの時間・給与の目安や、シフトの重なりをすぐに確認できます。
 ブラウザ版（Web）とスマホネイティブ版（iOS / Android）を、ひとつのリポジトリで開発します。
 
-> 現在できること: ログイン、勤務先の登録、シフトの手入力・一覧・削除、重なりの検出、勤務時間と給与の目安。
-> 写真・スクショ・PDF などからのシフト読み取りはこれから実装します。
+> 現在できること: ログイン、勤務先の登録、**写真・スクショからのシフト読み取り（AI）**、シフトの手入力・一覧・削除、重なりの検出、勤務時間と給与の目安。
+> PDF・Excel からの読み取りや外部サービス連携はこれから実装します。
 
 ## 構成
 
@@ -24,16 +24,17 @@ shifton/
 └── docs/           # 設計ドキュメント
 ```
 
-| 領域          | 技術                                                 |
-| ------------- | ---------------------------------------------------- |
-| Web           | Next.js 16（App Router）, React 19, Tailwind CSS 4   |
-| モバイル      | Expo SDK 58, React Native, Expo Router               |
-| 共通ロジック  | TypeScript, Zod（入力検証・型定義）                  |
-| バックエンド  | Supabase（PostgreSQL / 認証 / 行レベルセキュリティ） |
-| ビルド管理    | pnpm, Turborepo                                      |
-| Lint / Format | Biome                                                |
-| テスト        | Vitest                                               |
-| CI            | GitHub Actions                                       |
+| 領域           | 技術                                                 |
+| -------------- | ---------------------------------------------------- |
+| Web            | Next.js 16（App Router）, React 19, Tailwind CSS 4   |
+| モバイル       | Expo SDK 58, React Native, Expo Router               |
+| 共通ロジック   | TypeScript, Zod（入力検証・型定義）                  |
+| 読み取り（AI） | Claude API（画像認識・構造化出力）                   |
+| バックエンド   | Supabase（PostgreSQL / 認証 / 行レベルセキュリティ） |
+| ビルド管理     | pnpm, Turborepo                                      |
+| Lint / Format  | Biome                                                |
+| テスト         | Vitest                                               |
+| CI             | GitHub Actions                                       |
 
 技術選定の理由や今後の方針は [docs/architecture.md](docs/architecture.md) を参照してください。
 
@@ -48,6 +49,7 @@ pnpm install
 ログインやシフトの保存を使うには Supabase の設定が必要です。
 **はじめての方は [docs/supabase-setup.md](docs/supabase-setup.md) の手順に沿って設定してください。**
 （未設定でもアプリは起動し、`/demo` でサンプルのシフト表を見られます）
+写真・スクショからの読み取りを使う場合は、続けて [docs/shift-reader-setup.md](docs/shift-reader-setup.md) の設定も行ってください。
 
 ```bash
 # ブラウザ版を起動（http://localhost:3000）

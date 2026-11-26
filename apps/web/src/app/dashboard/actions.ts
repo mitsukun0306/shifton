@@ -2,6 +2,7 @@
 
 import {
   createShift,
+  createShifts,
   createWorkplace,
   deleteShift,
   shiftInputSchema,
@@ -74,4 +75,32 @@ export async function deleteShiftAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (id) await deleteShift(supabase, id);
   refresh();
+}
+
+export type ImportState = { error?: string; count?: number };
+
+/** 読み取ったシフトをまとめて登録する */
+export async function importShiftsAction(
+  workplaceId: string,
+  shifts: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    breakMinutes: number;
+    note?: string;
+  }>,
+): Promise<ImportState> {
+  const { supabase } = await requireUser();
+  const inputs = shifts.map((s) => ({ ...s, workplaceId }));
+  const invalid = inputs.findIndex((s) => !shiftInputSchema.safeParse(s).success);
+  if (invalid >= 0) {
+    return { error: `${invalid + 1}件目のシフトの入力内容を確認してください` };
+  }
+  try {
+    const created = await createShifts(supabase, inputs, "image");
+    refresh();
+    return { count: created.length };
+  } catch (e) {
+    return { error: errorMessage("シフトを登録できませんでした", e) };
+  }
 }

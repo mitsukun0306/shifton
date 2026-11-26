@@ -22,6 +22,9 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton>シフト</TabButton>
           </TabTrigger>
+          <TabTrigger name="read" href="/read" asChild>
+            <TabButton>読み取り</TabButton>
+          </TabTrigger>
           <TabTrigger name="add" href="/add" asChild>
             <TabButton>追加</TabButton>
           </TabTrigger>
