@@ -1,0 +1,2 @@
+# Windows のバッチファイルは CRLF で保存する（LF だと誤動作することがある）
+*.cmd text eol=crlf
