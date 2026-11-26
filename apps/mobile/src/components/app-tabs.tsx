@@ -21,6 +21,14 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="read">
+        <NativeTabs.Trigger.Label>読み取り</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require("@/assets/images/tabIcons/explore.png")}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="add">
         <NativeTabs.Trigger.Label>追加</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

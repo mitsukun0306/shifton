@@ -8,6 +8,7 @@ import {
   todayIn,
   workingMinutes,
 } from "@shifton/core";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
@@ -69,6 +70,14 @@ async function Dashboard() {
         </Card>
       ) : (
         <>
+          <Link
+            href="/dashboard/import"
+            className="flex items-center justify-between rounded-xl bg-sky-600 px-6 py-4 font-medium text-white hover:bg-sky-700"
+          >
+            <span>📷 写真・スクショからシフトを読み取る</span>
+            <span aria-hidden>→</span>
+          </Link>
+
           <Card>
             <h1 className="mb-4 text-lg font-bold">これからのシフト</h1>
             {conflictIds.size > 0 && (

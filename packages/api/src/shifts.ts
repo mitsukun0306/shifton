@@ -1,4 +1,4 @@
-import { isoDateSchema, type Shift, timeOfDaySchema } from "@shifton/core";
+import { isoDateSchema, type Shift, type ShiftSource, timeOfDaySchema } from "@shifton/core";
 import { z } from "zod";
 import type { ShiftonClient } from "./client";
 import type { ShiftRow } from "./database.types";
@@ -64,6 +64,30 @@ export async function createShift(client: ShiftonClient, input: ShiftInput): Pro
     .single();
   if (error) throw error;
   return toShift(data);
+}
+
+/** 複数のシフトをまとめて登録する（読み取り結果の一括登録など） */
+export async function createShifts(
+  client: ShiftonClient,
+  inputs: ShiftInput[],
+  source: ShiftSource = "manual",
+): Promise<Shift[]> {
+  if (inputs.length === 0) return [];
+  const rows = inputs.map((input) => {
+    const s = shiftInputSchema.parse(input);
+    return {
+      workplace_id: s.workplaceId,
+      date: s.date,
+      start_time: s.startTime,
+      end_time: s.endTime,
+      break_minutes: s.breakMinutes,
+      note: s.note || null,
+      source,
+    };
+  });
+  const { data, error } = await client.from("shifts").insert(rows).select();
+  if (error) throw error;
+  return data.map(toShift);
 }
 
 /** シフトを削除する */

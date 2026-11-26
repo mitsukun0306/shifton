@@ -34,6 +34,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "シフト表の画像を読み取るために、写真へのアクセスを許可してください",
+          "cameraPermission": "シフト表を撮影して読み取るために、カメラへのアクセスを許可してください"
+        }
       ]
     ],
     "experiments": {

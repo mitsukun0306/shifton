@@ -9,6 +9,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@shifton/api": "workspace:*",
     "@shifton/core": "workspace:*",
     "@supabase/ssr": "^0.12.7",
