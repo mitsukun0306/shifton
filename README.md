@@ -51,7 +51,7 @@ pnpm install
 （未設定でもアプリは起動し、`/demo` でサンプルのシフト表を見られます）
 写真・スクショからの読み取りを使う場合は、続けて [docs/shift-reader-setup.md](docs/shift-reader-setup.md) の設定も行ってください。
 
-スマホ実機で動かしながら確認する方法は [docs/mobile-device-testing.md](docs/mobile-device-testing.md) を参照してください。
+スマホ実機で動かしながら確認する方法は [docs/mobile-device-testing.md](docs/mobile-device-testing.md) を参照してください（Windows では `start-phone.cmd` をダブルクリックするだけで起動できます）。
 
 ```bash
 # ブラウザ版を起動（http://localhost:3000）
