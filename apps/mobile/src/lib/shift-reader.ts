@@ -1,9 +1,31 @@
 import type { NormalizedExtraction } from "@shifton/core";
+import Constants from "expo-constants";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { Platform } from "react-native";
 
-/** 読み取り API を持つ Web 版サーバーの URL（例: http://192.168.0.10:3000） */
-const apiBaseUrl = (process.env.EXPO_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
+/** 開発中、Web 版サーバー（pnpm dev:web）が待ち受けるポート */
+const DEV_WEB_PORT = 3000;
+
+/**
+ * 読み取り API を持つ Web 版サーバーの URL（例: http://192.168.0.10:3000）を決める。
+ *
+ * 開発中（Expo Go など）に未設定、または localhost が指定されている場合は、
+ * Metro（pnpm dev:mobile）を動かしているパソコンの IP アドレスを使う。
+ * スマホから見た localhost はスマホ自身なので、そのままでは届かないため。
+ */
+export function resolveApiBaseUrl(configured: string, devHostUri?: string | null): string {
+  const url = configured.trim().replace(/\/$/, "");
+  const devHost = devHostUri?.split(":")[0];
+  if (!devHost) return url;
+  if (url === "") return `http://${devHost}:${DEV_WEB_PORT}`;
+  return url.replace(/^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/, `$1${devHost}`);
+}
+
+const apiBaseUrl = resolveApiBaseUrl(
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "",
+  // Web 版の Expo（ブラウザ）ではパソコン上で動くので localhost のままでよい
+  __DEV__ && Platform.OS !== "web" ? Constants.expoConfig?.hostUri : null,
+);
 
 export const isShiftReaderConfigured = apiBaseUrl !== "";
 

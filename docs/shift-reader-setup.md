@@ -45,16 +45,10 @@ Web 版を再起動（Ctrl + C で止めて `pnpm dev:web`）すると、シフ�
 
 スマホ版は、パソコンで動いている Web 版のサーバーに画像を送って読み取ります。
 
-1. パソコンの IP アドレスを調べます。
-   - Mac: システム設定 > Wi-Fi > 接続中のネットワークの「詳細」 > IP アドレス
-   - Windows: 設定 > ネットワークとインターネット > Wi-Fi > プロパティ > IPv4 アドレス
-2. `apps/mobile/.env` に追加します（`192.168.0.10` の部分を調べた IP アドレスに変えます）。
+1. `pnpm dev:web` と `pnpm dev:mobile` の両方を起動し、スマホの Expo Go で開きます（手順は [mobile-device-testing.md](mobile-device-testing.md)）。
+2. 「読み取り」タブから写真を撮る・画像を選ぶと読み取れます。
 
-   ```
-   EXPO_PUBLIC_API_BASE_URL=http://192.168.0.10:3000
-   ```
-3. Web 版を `pnpm dev:web -- -H 0.0.0.0` で起動します（同じ Wi-Fi のスマホからつながるようにするため）。
-4. スマホ版を再起動し、「読み取り」タブから写真を撮る・画像を選ぶと読み取れます。
+開発中は、スマホ版がパソコンの IP アドレスを自動で使うので、`EXPO_PUBLIC_API_BASE_URL` の設定は不要です。
 
 > 本番公開後は、公開した Web 版の URL（例: `https://shifton.example.com`）を設定します。
 
@@ -70,4 +64,4 @@ Web 版を再起動（Ctrl + C で止めて `pnpm dev:web`）すると、シフ�
 | 読み取り機能が未設定です                         | `apps/web/.env.local` の `ANTHROPIC_API_KEY` を確認し、Web 版を再起動                              |
 | API キーを確認してください                       | キーのコピー漏れ・削除済みのキーでないかを確認                                                     |
 | 読み取りが混み合っています                       | 少し待ってから再度お試しください                                                                   |
-| 読み取りサーバーに接続できませんでした（スマホ） | `EXPO_PUBLIC_API_BASE_URL` の IP アドレス、同じ Wi-Fi か、Web 版を `-H 0.0.0.0` で起動したかを確認 |
+| 読み取りサーバーに接続できませんでした（スマホ） | パソコンとスマホが同じ Wi-Fi か、`pnpm dev:web` が動いているかを確認 |
