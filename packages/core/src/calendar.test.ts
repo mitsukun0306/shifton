@@ -6,6 +6,7 @@ import {
   gridRange,
   groupByDate,
   isYearMonth,
+  legalBreakMinutes,
   monthGrid,
   overlappingShifts,
   suggestPresets,
@@ -55,7 +56,7 @@ describe("calendar", () => {
     expect(map.get("2026-12-01")).toHaveLength(2);
   });
 
-  it("よく入る時間帯を多い順に提案し、足りない分は既定値で埋める", () => {
+  it("使った回数が多い時間帯の順に提案する（履歴があれば履歴のみ）", () => {
     const s = (startTime: string, endTime: string, workplaceId = "a") => ({
       workplaceId,
       startTime,
@@ -63,15 +64,29 @@ describe("calendar", () => {
       breakMinutes: 0,
     });
     const presets = suggestPresets(
-      [s("18:00", "22:00"), s("18:00", "22:00"), s("11:00", "16:00"), s("08:00", "12:00", "b")],
+      [s("11:00", "16:00"), s("18:00", "22:00"), s("18:00", "22:00"), s("08:00", "12:00", "b")],
       "a",
-      3,
     );
     expect(presets).toEqual([
-      { startTime: "18:00", endTime: "22:00", breakMinutes: 0 },
-      { startTime: "11:00", endTime: "16:00", breakMinutes: 0 },
-      { startTime: "09:00", endTime: "14:00", breakMinutes: 0 },
+      { startTime: "18:00", endTime: "22:00", breakMinutes: 0, count: 2 },
+      { startTime: "11:00", endTime: "16:00", breakMinutes: 0, count: 1 },
     ]);
+  });
+
+  it("履歴がない勤務先には既定の時間帯（法定休憩つき）を出す", () => {
+    const presets = suggestPresets([], "a");
+    expect(presets[0]).toEqual({ startTime: "09:00", endTime: "14:00", breakMinutes: 0 });
+    expect(presets.find((p) => p.endTime === "18:00")?.breakMinutes).toBe(60);
+  });
+
+  it("労働基準法の最低休憩時間を計算する", () => {
+    expect(legalBreakMinutes("10:00", "16:00")).toBe(0); // ちょうど6時間
+    expect(legalBreakMinutes("10:00", "16:30")).toBe(45);
+    expect(legalBreakMinutes("09:00", "17:45")).toBe(45); // 45分休めば労働8時間
+    expect(legalBreakMinutes("09:00", "17:46")).toBe(60);
+    expect(legalBreakMinutes("09:00", "18:00")).toBe(60);
+    expect(legalBreakMinutes("22:00", "07:00")).toBe(60); // 日またぎ
+    expect(legalBreakMinutes("", "07:00")).toBe(0); // 入力途中
   });
 
   it("入れようとしているシフトと重なる既存シフトを返す", () => {

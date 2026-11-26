@@ -8,6 +8,7 @@ import {
   formatMonthJa,
   formatShortTime,
   groupByDate,
+  legalBreakMinutes,
   monthGrid,
   monthOf,
   overlappingShifts,
@@ -20,7 +21,9 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreakPicker } from "@/components/break-picker";
 import { ErrorText, PrimaryButton, TextField } from "@/components/form";
+import { PickerField } from "@/components/picker-field";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { WorkplaceForm } from "@/components/workplace-form";
@@ -50,9 +53,8 @@ export default function CalendarScreen() {
   const [selected, setSelected] = useState<string[]>([today]);
   const [workplaceId, setWorkplaceId] = useState<string>();
   const [showCustom, setShowCustom] = useState(false);
-  const [startTime, setStartTime] = useState("10:00");
-  const [endTime, setEndTime] = useState("15:00");
-  const [breakMinutes, setBreakMinutes] = useState("0");
+  /** 「時間を指定して追加」の内容。未編集のあいだは、選択中の勤務先で一番よく使う時間帯を出す */
+  const [customDraft, setCustomDraft] = useState<ShiftPreset>();
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<{ kind: "error" | "info"; text: string }>();
   const [busy, setBusy] = useState(false);
@@ -117,7 +119,9 @@ export default function CalendarScreen() {
     const inputs = selected.map((date) => ({
       workplaceId: selectedWorkplaceId,
       date,
-      ...preset,
+      startTime: preset.startTime,
+      endTime: preset.endTime,
+      breakMinutes: preset.breakMinutes,
       note: note.trim() || undefined,
     }));
     for (const input of inputs) {
@@ -172,7 +176,14 @@ export default function CalendarScreen() {
 
   const singleDay = !multi && selected.length === 1 ? selected[0] : undefined;
   const dayShifts = singleDay ? (byDate.get(singleDay) ?? []) : [];
-  const custom = { startTime, endTime, breakMinutes: Number(breakMinutes) || 0 };
+  const custom: ShiftPreset = customDraft ??
+    presets[0] ?? { startTime: "10:00", endTime: "15:00", breakMinutes: 0 };
+
+  /** 開始・終了を変えたら、休憩を法定の最低時間に合わせ直す（あとから変更可） */
+  function changeTime(patch: Partial<Pick<ShiftPreset, "startTime" | "endTime">>) {
+    const next = { ...custom, ...patch };
+    setCustomDraft({ ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) });
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -380,7 +391,11 @@ export default function CalendarScreen() {
                         key={wp.id}
                         accessibilityRole="radio"
                         accessibilityState={{ checked: active }}
-                        onPress={() => setWorkplaceId(wp.id)}
+                        onPress={() => {
+                          setWorkplaceId(wp.id);
+                          // 勤務先を変えたら、その勤務先で一番よく使う時間帯に戻す
+                          setCustomDraft(undefined);
+                        }}
                         style={[
                           styles.chip,
                           { borderColor: wp.color },
@@ -395,9 +410,14 @@ export default function CalendarScreen() {
                   })}
                 </View>
 
-                <ThemedText type="smallBold">時間帯をタップで追加</ThemedText>
+                <ThemedText type="smallBold">
+                  時間帯をタップで追加
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {presets[0]?.count ? "（よく使う順）" : "（使うほど自分用に変わります）"}
+                  </ThemedText>
+                </ThemedText>
                 <View style={styles.presets}>
-                  {presets.map((p) => {
+                  {presets.map((p, i) => {
                     const overlaps = conflictDays(p);
                     const disabled = busy || selected.length === 0;
                     return (
@@ -416,11 +436,22 @@ export default function CalendarScreen() {
                           (pressed || disabled) && styles.dimmed,
                         ]}
                       >
+                        {i === 0 && p.count ? (
+                          <ThemedText
+                            style={[
+                              styles.topBadge,
+                              { backgroundColor: workplace?.color ?? ACCENT },
+                            ]}
+                          >
+                            いちばん多い
+                          </ThemedText>
+                        ) : null}
                         <ThemedText style={styles.presetTime}>
                           {p.startTime}〜{p.endTime}
                         </ThemedText>
                         <ThemedText style={styles.presetSub} themeColor="textSecondary">
                           {p.breakMinutes > 0 ? `休憩${p.breakMinutes}分` : "休憩なし"}
+                          {p.count ? `・${p.count}回` : ""}
                         </ThemedText>
                         {overlaps.length > 0 && (
                           <ThemedText style={styles.presetWarn}>
@@ -441,36 +472,31 @@ export default function CalendarScreen() {
                   <View style={styles.customForm}>
                     <View style={styles.row}>
                       <View style={styles.flex}>
-                        <TextField
+                        <PickerField
                           label="開始"
-                          value={startTime}
-                          onChangeText={setStartTime}
-                          placeholder="10:00"
+                          mode="time"
+                          value={custom.startTime}
+                          onChange={(startTime) => changeTime({ startTime })}
                         />
                       </View>
                       <View style={styles.flex}>
-                        <TextField
+                        <PickerField
                           label="終了"
-                          value={endTime}
-                          onChangeText={setEndTime}
-                          placeholder="15:00"
-                        />
-                      </View>
-                      <View style={styles.flex}>
-                        <TextField
-                          label="休憩（分）"
-                          value={breakMinutes}
-                          onChangeText={setBreakMinutes}
-                          keyboardType="number-pad"
+                          mode="time"
+                          value={custom.endTime}
+                          onChange={(endTime) => changeTime({ endTime })}
                         />
                       </View>
                     </View>
+                    <BreakPicker
+                      value={custom.breakMinutes}
+                      onChange={(breakMinutes) => setCustomDraft({ ...custom, breakMinutes })}
+                      legalMinutes={legalBreakMinutes(custom.startTime, custom.endTime)}
+                    />
                     <TextField label="メモ（任意）" value={note} onChangeText={setNote} />
-                    {/^\d{2}:\d{2}$/.test(startTime) &&
-                      /^\d{2}:\d{2}$/.test(endTime) &&
-                      conflictDays(custom).length > 0 && (
-                        <ErrorText>⚠ この時間は他のシフトと重なります</ErrorText>
-                      )}
+                    {conflictDays(custom).length > 0 && (
+                      <ErrorText>⚠ この時間は他のシフトと重なります</ErrorText>
+                    )}
                     <PrimaryButton
                       title="この時間で追加"
                       onPress={() => add(custom)}
@@ -565,7 +591,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
   },
   whiteBold: { color: "#fff", fontWeight: 700 },
-  presets: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
+  presets: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two, paddingTop: Spacing.one },
   preset: {
     flexBasis: "47%",
     flexGrow: 1,
@@ -575,6 +601,18 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   presetTime: { fontSize: 16, fontWeight: 700 },
+  topBadge: {
+    position: "absolute",
+    top: -9,
+    left: Spacing.two,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    overflow: "hidden",
+    color: "#fff",
+    fontSize: 10,
+    lineHeight: 16,
+    fontWeight: 700,
+  },
   presetSub: { fontSize: 12, lineHeight: 16 },
   presetWarn: { fontSize: 12, lineHeight: 16, color: "#dc2626" },
   dimmed: { opacity: 0.5 },

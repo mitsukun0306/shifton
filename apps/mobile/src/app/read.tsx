@@ -1,13 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createShifts } from "@shifton/api";
-import type { ShiftCandidate } from "@shifton/core";
+import { legalBreakMinutes, type ShiftCandidate } from "@shifton/core";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreakPicker } from "@/components/break-picker";
 import { ErrorText, PrimaryButton, TextField } from "@/components/form";
+import { PickerField } from "@/components/picker-field";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, MaxContentWidth, Spacing, WebTabBarInset } from "@/constants/theme";
@@ -16,7 +18,7 @@ import { isShiftReaderConfigured, readShiftImage } from "@/lib/shift-reader";
 import { supabase } from "@/lib/supabase";
 import { useShiftData } from "@/lib/use-shift-data";
 
-type Row = ShiftCandidate & { include: boolean; breakText: string };
+type Row = ShiftCandidate & { include: boolean };
 type Asset = { uri: string; width: number; height: number };
 
 const NAME_KEY = "shifton:nameOnSheet";
@@ -78,7 +80,12 @@ export default function ReadScreen() {
       });
       setWarnings(result.warnings);
       setRows(
-        result.candidates.map((c) => ({ ...c, include: true, breakText: String(c.breakMinutes) })),
+        result.candidates.map((c) => ({
+          ...c,
+          include: true,
+          // シフト表に休憩が書かれていなくても、法律で必要な最低限の休憩は入れておく
+          breakMinutes: Math.max(c.breakMinutes, legalBreakMinutes(c.startTime, c.endTime)),
+        })),
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -89,6 +96,18 @@ export default function ReadScreen() {
 
   function update(index: number, patch: Partial<Row>) {
     setRows((prev) => prev?.map((r, i) => (i === index ? { ...r, ...patch } : r)) ?? null);
+  }
+
+  /** 開始・終了を変えたら、休憩を法定の最低時間に合わせ直す（あとから変更可） */
+  function updateTime(index: number, patch: Partial<Pick<Row, "startTime" | "endTime">>) {
+    setRows(
+      (prev) =>
+        prev?.map((r, i) => {
+          if (i !== index) return r;
+          const next = { ...r, ...patch };
+          return { ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) };
+        }) ?? null,
+    );
   }
 
   async function save() {
@@ -104,7 +123,7 @@ export default function ReadScreen() {
           date: r.date.trim(),
           startTime: r.startTime.trim(),
           endTime: r.endTime.trim(),
-          breakMinutes: r.breakText || 0,
+          breakMinutes: r.breakMinutes,
           note: r.note,
         })),
         "image",
@@ -236,35 +255,35 @@ export default function ReadScreen() {
                       accessibilityLabel="このシフトを登録する"
                     />
                   </View>
-                  <TextField
+                  <PickerField
                     label="日付"
+                    mode="date"
                     value={r.date}
-                    onChangeText={(date) => update(i, { date })}
+                    onChange={(date) => update(i, { date })}
                   />
                   <View style={styles.row}>
                     <View style={styles.flex}>
-                      <TextField
+                      <PickerField
                         label="開始"
+                        mode="time"
                         value={r.startTime}
-                        onChangeText={(startTime) => update(i, { startTime })}
+                        onChange={(startTime) => updateTime(i, { startTime })}
                       />
                     </View>
                     <View style={styles.flex}>
-                      <TextField
+                      <PickerField
                         label="終了"
+                        mode="time"
                         value={r.endTime}
-                        onChangeText={(endTime) => update(i, { endTime })}
-                      />
-                    </View>
-                    <View style={styles.flex}>
-                      <TextField
-                        label="休憩(分)"
-                        value={r.breakText}
-                        onChangeText={(breakText) => update(i, { breakText })}
-                        keyboardType="number-pad"
+                        onChange={(endTime) => updateTime(i, { endTime })}
                       />
                     </View>
                   </View>
+                  <BreakPicker
+                    value={r.breakMinutes}
+                    onChange={(breakMinutes) => update(i, { breakMinutes })}
+                    legalMinutes={legalBreakMinutes(r.startTime, r.endTime)}
+                  />
                   {r.note && (
                     <ThemedText type="small" themeColor="textSecondary">
                       メモ: {r.note}

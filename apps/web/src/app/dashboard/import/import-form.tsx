@@ -1,9 +1,10 @@
 "use client";
 
 import type { NormalizedExtraction, ShiftCandidate, Workplace } from "@shifton/core";
-import { formatDateJa } from "@shifton/core";
+import { formatDateJa, legalBreakMinutes } from "@shifton/core";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BreakPicker } from "@/components/break-picker";
 import { Alert, Button, Card, Field } from "@/components/ui";
 import { importShiftsAction } from "../actions";
 import { resizeImage } from "./resize-image";
@@ -62,7 +63,14 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
       }
       const result = data as NormalizedExtraction;
       setWarnings(result.warnings);
-      setRows(result.candidates.map((c) => ({ ...c, include: true })));
+      setRows(
+        result.candidates.map((c) => ({
+          ...c,
+          include: true,
+          // シフト表に休憩が書かれていなくても、法律で必要な最低限の休憩は入れておく
+          breakMinutes: Math.max(c.breakMinutes, legalBreakMinutes(c.startTime, c.endTime)),
+        })),
+      );
     } catch {
       setError("通信に失敗しました。通信環境を確認してください");
     } finally {
@@ -72,6 +80,19 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
 
   function update(index: number, patch: Partial<Row>) {
     setRows((prev) => prev?.map((r, i) => (i === index ? { ...r, ...patch } : r)) ?? null);
+  }
+
+  /** 開始・終了を変えたら、休憩を法定の最低時間に合わせ直す（あとから変更可） */
+  function updateTime(index: number, patch: Partial<Pick<Row, "startTime" | "endTime">>) {
+    setRows(
+      (prev) =>
+        prev?.map((r, i) => {
+          if (i !== index) return r;
+          const next = { ...r, ...patch };
+          if (!next.startTime || !next.endTime) return next;
+          return { ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) };
+        }) ?? null,
+    );
   }
 
   async function save() {
@@ -218,7 +239,7 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
                         <input
                           type="time"
                           value={r.startTime}
-                          onChange={(e) => update(i, { startTime: e.target.value })}
+                          onChange={(e) => updateTime(i, { startTime: e.target.value })}
                           className={inputClass}
                         />
                       </td>
@@ -226,18 +247,18 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
                         <input
                           type="time"
                           value={r.endTime}
-                          onChange={(e) => update(i, { endTime: e.target.value })}
+                          onChange={(e) => updateTime(i, { endTime: e.target.value })}
                           className={inputClass}
                         />
                       </td>
                       <td>
-                        <input
-                          type="number"
-                          min={0}
-                          step={5}
+                        <BreakPicker
+                          compact
                           value={r.breakMinutes}
-                          onChange={(e) => update(i, { breakMinutes: Number(e.target.value) || 0 })}
-                          className={`${inputClass} w-20`}
+                          onChange={(breakMinutes) => update(i, { breakMinutes })}
+                          legalMinutes={
+                            r.startTime && r.endTime ? legalBreakMinutes(r.startTime, r.endTime) : 0
+                          }
                         />
                       </td>
                       <td>

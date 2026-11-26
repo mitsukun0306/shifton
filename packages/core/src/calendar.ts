@@ -1,6 +1,6 @@
 import type { Shift } from "./schemas";
 import { isOverlapping } from "./shift";
-import { addDays } from "./time";
+import { addDays, spanMinutes } from "./time";
 
 /** "YYYY-MM" 形式の月 */
 export type YearMonth = string;
@@ -14,6 +14,7 @@ export interface CalendarDay {
   weekday: number;
 }
 
+const TIME_PATTERN = /^\d{1,2}:\d{2}$/;
 const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /** "YYYY-MM" として正しいか */
@@ -91,25 +92,47 @@ export interface ShiftPreset {
   startTime: string;
   endTime: string;
   breakMinutes: number;
+  /** 過去に使った回数（履歴から出した候補のみ） */
+  count?: number;
 }
 
-/** 勤務先にまだシフトがないときの時間帯の候補 */
+/**
+ * 労働基準法第34条（厚生労働省）で定められた最低限の休憩時間（分）。
+ * 労働時間が6時間を超えると45分以上、8時間を超えると60分以上の休憩が必要。
+ * 拘束時間（開始〜終了）から休憩を引いた労働時間で判定する。
+ */
+export function legalBreakMinutes(startTime: string, endTime: string): number {
+  // 入力途中など時刻として読めないときは判定しない
+  if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) return 0;
+  const span = spanMinutes(startTime, endTime);
+  if (span <= 6 * 60) return 0;
+  // 45分休んでも労働時間が8時間を超えるなら60分
+  if (span - 45 <= 8 * 60) return 45;
+  return 60;
+}
+
+function preset(startTime: string, endTime: string): ShiftPreset {
+  return { startTime, endTime, breakMinutes: legalBreakMinutes(startTime, endTime) };
+}
+
+/** 勤務先にまだシフトの履歴がないときの時間帯の候補（休憩は法定の最低時間） */
 export const defaultShiftPresets: readonly ShiftPreset[] = [
-  { startTime: "09:00", endTime: "14:00", breakMinutes: 0 },
-  { startTime: "10:00", endTime: "15:00", breakMinutes: 0 },
-  { startTime: "17:00", endTime: "22:00", breakMinutes: 0 },
+  preset("09:00", "14:00"),
+  preset("10:00", "15:00"),
+  preset("09:00", "18:00"),
+  preset("17:00", "22:00"),
 ];
 
 /**
- * 勤務先の過去のシフトから、よく入る時間帯を多い順に返す。
- * 足りない分は defaultShiftPresets で埋める。
+ * 勤務先の過去のシフトから、使った回数が多い時間帯の順に返す（1番目が最もよく使う時間帯）。
+ * 履歴がない勤務先だけ defaultShiftPresets を返す。
  */
 export function suggestPresets(
   shifts: readonly Pick<Shift, "workplaceId" | "startTime" | "endTime" | "breakMinutes">[],
   workplaceId: string,
   limit = 4,
 ): ShiftPreset[] {
-  const counts = new Map<string, { preset: ShiftPreset; count: number }>();
+  const counts = new Map<string, Required<ShiftPreset>>();
   for (const s of shifts) {
     if (s.workplaceId !== workplaceId) continue;
     const key = `${s.startTime}-${s.endTime}-${s.breakMinutes}`;
@@ -117,21 +140,16 @@ export function suggestPresets(
     if (entry) entry.count++;
     else
       counts.set(key, {
-        preset: { startTime: s.startTime, endTime: s.endTime, breakMinutes: s.breakMinutes },
+        startTime: s.startTime,
+        endTime: s.endTime,
+        breakMinutes: s.breakMinutes,
         count: 1,
       });
   }
-  const frequent = [...counts.values()]
-    .sort((a, b) => b.count - a.count || a.preset.startTime.localeCompare(b.preset.startTime))
-    .map((e) => e.preset);
-
-  const result = frequent.slice(0, limit);
-  for (const d of defaultShiftPresets) {
-    if (result.length >= limit) break;
-    const dup = result.some((p) => p.startTime === d.startTime && p.endTime === d.endTime);
-    if (!dup) result.push(d);
-  }
-  return result;
+  if (counts.size === 0) return defaultShiftPresets.slice(0, limit);
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.startTime.localeCompare(b.startTime))
+    .slice(0, limit);
 }
 
 /** これから入れようとしているシフトと時間が重なる、既存のシフトを返す */
@@ -141,3 +159,6 @@ export function overlappingShifts<T extends Pick<Shift, "date" | "startTime" | "
 ): T[] {
   return existing.filter((s) => isOverlapping(candidate, s));
 }
+
+/** 休憩時間を選ぶボタンの候補（分） */
+export const breakMinuteOptions = [0, 15, 30, 45, 60, 90] as const;

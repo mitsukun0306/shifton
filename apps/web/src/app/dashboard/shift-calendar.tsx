@@ -9,6 +9,7 @@ import {
   formatMonthJa,
   formatShortTime,
   groupByDate,
+  legalBreakMinutes,
   monthGrid,
   overlappingShifts,
   type Shift,
@@ -20,6 +21,7 @@ import {
 } from "@shifton/core";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
+import { BreakPicker } from "@/components/break-picker";
 import { Alert, Button, Field } from "@/components/ui";
 import { addShiftsAction, removeShiftAction } from "./actions";
 
@@ -55,7 +57,14 @@ export function ShiftCalendar({
   const [multi, setMulti] = useState(false);
   const [selected, setSelected] = useState<string[]>([defaultDay]);
   const [workplaceId, setWorkplaceId] = useState(workplaces[0]?.id ?? "");
-  const [custom, setCustom] = useState({ startTime: "10:00", endTime: "15:00", breakMinutes: 0 });
+  const [custom, setCustom] = useState<ShiftPreset>(
+    () =>
+      suggestPresets(recentShifts, workplaces[0]?.id ?? "")[0] ?? {
+        startTime: "10:00",
+        endTime: "15:00",
+        breakMinutes: 0,
+      },
+  );
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<{ kind: "error" | "info"; text: string }>();
   const [pending, startTransition] = useTransition();
@@ -73,6 +82,22 @@ export function ShiftCalendar({
     [recentShifts, workplaceId],
   );
   const workplace = workplaceById.get(workplaceId);
+
+  /** 勤務先を変えたら、「時間を指定」の初期値もその勤務先で一番よく使う時間帯にする */
+  function selectWorkplace(id: string) {
+    setWorkplaceId(id);
+    const top = suggestPresets(recentShifts, id)[0];
+    if (top) setCustom(top);
+  }
+
+  /** 開始・終了を変えたら、休憩を法定の最低時間に合わせ直す（あとから変更可） */
+  function changeTime(patch: Partial<Pick<ShiftPreset, "startTime" | "endTime">>) {
+    setCustom((cur) => {
+      const next = { ...cur, ...patch };
+      if (!next.startTime || !next.endTime) return next;
+      return { ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) };
+    });
+  }
 
   const conflictIds = useMemo(
     () => new Set(findConflicts(shifts).flatMap(([a, b]) => [a.id, b.id])),
@@ -123,7 +148,9 @@ export function ShiftCalendar({
         selected.map((date) => ({
           workplaceId,
           date,
-          ...preset,
+          startTime: preset.startTime,
+          endTime: preset.endTime,
+          breakMinutes: preset.breakMinutes,
           note: note.trim() || undefined,
         })),
       );
@@ -323,7 +350,7 @@ export function ShiftCalendar({
                     name="calendar-workplace"
                     value={wp.id}
                     checked={active}
-                    onChange={() => setWorkplaceId(wp.id)}
+                    onChange={() => selectWorkplace(wp.id)}
                     className="peer sr-only"
                   />
                   <span
@@ -343,9 +370,14 @@ export function ShiftCalendar({
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">時間帯をタップで追加</p>
+          <p className="text-sm font-medium">
+            時間帯をタップで追加
+            <span className="ml-2 text-xs font-normal text-slate-500">
+              {presets[0]?.count ? "よく使う順" : "よくある時間帯（使うほど自分用に変わります）"}
+            </span>
+          </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {presets.map((p) => {
+            {presets.map((p, i) => {
               const overlaps = conflictDays(p);
               return (
                 <button
@@ -353,14 +385,23 @@ export function ShiftCalendar({
                   type="button"
                   disabled={pending || selected.length === 0}
                   onClick={() => add(p)}
-                  className="flex flex-col items-center rounded-lg border-2 bg-white px-2 py-2 tabular-nums hover:opacity-80 disabled:opacity-50 dark:bg-slate-900"
+                  className="relative flex flex-col items-center rounded-lg border-2 bg-white px-2 py-2 tabular-nums hover:opacity-80 disabled:opacity-50 dark:bg-slate-900"
                   style={{ borderColor: workplace?.color }}
                 >
+                  {i === 0 && p.count && (
+                    <span
+                      className="absolute -top-2 left-2 rounded-full px-1.5 text-[10px] font-bold text-white"
+                      style={{ backgroundColor: workplace?.color ?? "#0284c7" }}
+                    >
+                      いちばん多い
+                    </span>
+                  )}
                   <span className="font-bold">
                     {p.startTime}〜{p.endTime}
                   </span>
                   <span className="text-xs text-slate-500">
                     {p.breakMinutes > 0 ? `休憩${p.breakMinutes}分` : "休憩なし"}
+                    {p.count ? `・${p.count}回` : ""}
                   </span>
                   {overlaps.length > 0 && (
                     <span className="text-xs text-red-600">
@@ -378,30 +419,31 @@ export function ShiftCalendar({
             時間を指定して追加
           </summary>
           <div className="mt-3 flex flex-col gap-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Field
                 label="開始"
                 type="time"
+                step={300}
                 value={custom.startTime}
-                onChange={(e) => setCustom({ ...custom, startTime: e.target.value })}
+                onChange={(e) => changeTime({ startTime: e.target.value })}
               />
               <Field
                 label="終了"
                 type="time"
+                step={300}
                 value={custom.endTime}
-                onChange={(e) => setCustom({ ...custom, endTime: e.target.value })}
-              />
-              <Field
-                label="休憩（分）"
-                type="number"
-                min={0}
-                step={5}
-                value={custom.breakMinutes}
-                onChange={(e) =>
-                  setCustom({ ...custom, breakMinutes: Number(e.target.value) || 0 })
-                }
+                onChange={(e) => changeTime({ endTime: e.target.value })}
               />
             </div>
+            <BreakPicker
+              value={custom.breakMinutes}
+              onChange={(breakMinutes) => setCustom({ ...custom, breakMinutes })}
+              legalMinutes={
+                custom.startTime && custom.endTime
+                  ? legalBreakMinutes(custom.startTime, custom.endTime)
+                  : 0
+              }
+            />
             <Field
               label="メモ（任意）"
               value={note}
