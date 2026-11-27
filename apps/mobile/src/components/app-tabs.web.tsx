@@ -28,8 +28,8 @@ export default function AppTabs() {
           <TabTrigger name="read" href="/read" asChild>
             <TabButton>読み取り</TabButton>
           </TabTrigger>
-          <TabTrigger name="workplaces" href="/workplaces" asChild>
-            <TabButton>勤務先</TabButton>
+          <TabTrigger name="settings" href="/settings" asChild>
+            <TabButton>設定</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

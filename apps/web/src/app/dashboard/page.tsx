@@ -48,7 +48,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
       <Card>
         <h1 className="mb-1 text-lg font-bold">まずは勤務先を登録しましょう</h1>
         <p className="mb-6 text-sm text-slate-500">
-          掛け持ちしている場合は、あとから「勤務先」タブで追加できます。時給を入れると給与の目安を計算します。
+          掛け持ちしている場合は、あとから「設定」タブで追加できます。時給を入れると給与の目安を計算します。
         </p>
         <WorkplaceForm />
       </Card>

@@ -1,11 +1,12 @@
 "use client";
 
 import type { NormalizedExtraction, ShiftCandidate, Workplace } from "@shifton/core";
-import { formatDateJa, legalBreakMinutes } from "@shifton/core";
+import { breakForRules, formatDateJa } from "@shifton/core";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BreakPicker } from "@/components/break-picker";
 import { Alert, Button, Card, Field } from "@/components/ui";
+import { useSettings } from "@/lib/settings";
 import { importShiftsAction } from "../actions";
 import { resizeImage } from "./resize-image";
 
@@ -19,6 +20,7 @@ const inputClass =
 export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>();
+  const [settings] = useSettings();
   const [nameOnSheet, setNameOnSheet] = useState("");
   const [workplaceId, setWorkplaceId] = useState(workplaces[0]?.id ?? "");
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -68,7 +70,10 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
           ...c,
           include: true,
           // シフト表に休憩が書かれていなくても、法律で必要な最低限の休憩は入れておく
-          breakMinutes: Math.max(c.breakMinutes, legalBreakMinutes(c.startTime, c.endTime)),
+          breakMinutes: Math.max(
+            c.breakMinutes,
+            breakForRules(c.startTime, c.endTime, settings.breakRules),
+          ),
         })),
       );
     } catch {
@@ -90,7 +95,10 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
           if (i !== index) return r;
           const next = { ...r, ...patch };
           if (!next.startTime || !next.endTime) return next;
-          return { ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) };
+          return {
+            ...next,
+            breakMinutes: breakForRules(next.startTime, next.endTime, settings.breakRules),
+          };
         }) ?? null,
     );
   }
@@ -253,12 +261,12 @@ export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
                       </td>
                       <td>
                         <BreakPicker
+                          choices={settings.breakOptions}
                           compact
                           value={r.breakMinutes}
                           onChange={(breakMinutes) => update(i, { breakMinutes })}
-                          legalMinutes={
-                            r.startTime && r.endTime ? legalBreakMinutes(r.startTime, r.endTime) : 0
-                          }
+                          startTime={r.startTime}
+                          endTime={r.endTime}
                         />
                       </td>
                       <td>

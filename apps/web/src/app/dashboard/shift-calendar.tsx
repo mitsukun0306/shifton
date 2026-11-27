@@ -3,13 +3,13 @@
 import {
   addDays,
   addMonths,
+  breakForRules,
   findConflicts,
   formatDateJa,
   formatDuration,
   formatMonthJa,
   formatShortTime,
   groupByDate,
-  legalBreakMinutes,
   monthGrid,
   monthOf,
   overlappingShifts,
@@ -26,6 +26,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { BreakPicker } from "@/components/break-picker";
 import { Sheet } from "@/components/sheet";
 import { Alert, Button, Field } from "@/components/ui";
+import { useSettings } from "@/lib/settings";
 import { addShiftsAction, removeShiftAction } from "./actions";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -56,6 +57,7 @@ export function ShiftCalendar({
   const byDate = useMemo(() => groupByDate(shifts), [shifts]);
   const workplaceById = useMemo(() => new Map(workplaces.map((wp) => [wp.id, wp])), [workplaces]);
 
+  const [settings] = useSettings();
   const [multi, setMulti] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -63,7 +65,7 @@ export function ShiftCalendar({
   const [workplaceId, setWorkplaceId] = useState(workplaces[0]?.id ?? "");
   const [custom, setCustom] = useState<ShiftPreset>(
     () =>
-      suggestPresets(recentShifts, workplaces[0]?.id ?? "")[0] ?? {
+      suggestPresets(recentShifts, workplaces[0]?.id ?? "", 1, settings.breakRules)[0] ?? {
         startTime: "10:00",
         endTime: "15:00",
         breakMinutes: 0,
@@ -97,15 +99,15 @@ export function ShiftCalendar({
   }, [shifts, workplaces, month]);
 
   const presets = useMemo(
-    () => suggestPresets(recentShifts, workplaceId),
-    [recentShifts, workplaceId],
+    () => suggestPresets(recentShifts, workplaceId, settings.presetCount, settings.breakRules),
+    [recentShifts, workplaceId, settings],
   );
   const workplace = workplaceById.get(workplaceId);
 
   /** 勤務先を変えたら、「時間を指定」の初期値もその勤務先で一番よく使う時間帯にする */
   function selectWorkplace(id: string) {
     setWorkplaceId(id);
-    const top = suggestPresets(recentShifts, id)[0];
+    const top = suggestPresets(recentShifts, id, 1, settings.breakRules)[0];
     if (top) setCustom(top);
   }
 
@@ -114,7 +116,10 @@ export function ShiftCalendar({
     setCustom((cur) => {
       const next = { ...cur, ...patch };
       if (!next.startTime || !next.endTime) return next;
-      return { ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) };
+      return {
+        ...next,
+        breakMinutes: breakForRules(next.startTime, next.endTime, settings.breakRules),
+      };
     });
   }
 
@@ -500,13 +505,11 @@ export function ShiftCalendar({
                 />
               </div>
               <BreakPicker
+                choices={settings.breakOptions}
                 value={custom.breakMinutes}
                 onChange={(breakMinutes) => setCustom({ ...custom, breakMinutes })}
-                legalMinutes={
-                  custom.startTime && custom.endTime
-                    ? legalBreakMinutes(custom.startTime, custom.endTime)
-                    : 0
-                }
+                startTime={custom.startTime}
+                endTime={custom.endTime}
               />
               <Field
                 label="メモ（任意）"

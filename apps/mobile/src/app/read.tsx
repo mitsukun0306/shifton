@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createShifts } from "@shifton/api";
-import { formatDateJa, legalBreakMinutes, type ShiftCandidate } from "@shifton/core";
+import { breakForRules, formatDateJa, type ShiftCandidate } from "@shifton/core";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, MaxContentWidth, Spacing, WebTabBarInset } from "@/constants/theme";
 import { useAuth } from "@/lib/auth-context";
+import { useSettings } from "@/lib/settings-context";
 import { isShiftReaderConfigured, readShiftImage } from "@/lib/shift-reader";
 import { supabase } from "@/lib/supabase";
 import { useShiftData } from "@/lib/use-shift-data";
@@ -28,6 +29,7 @@ export default function ReadScreen() {
   const { session } = useAuth();
   const { workplaces } = useShiftData();
   const [asset, setAsset] = useState<Asset>();
+  const [settings] = useSettings();
   const [nameOnSheet, setNameOnSheet] = useState("");
   const [workplaceId, setWorkplaceId] = useState<string>();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -87,7 +89,10 @@ export default function ReadScreen() {
           ...c,
           include: true,
           // シフト表に休憩が書かれていなくても、法律で必要な最低限の休憩は入れておく
-          breakMinutes: Math.max(c.breakMinutes, legalBreakMinutes(c.startTime, c.endTime)),
+          breakMinutes: Math.max(
+            c.breakMinutes,
+            breakForRules(c.startTime, c.endTime, settings.breakRules),
+          ),
         })),
       );
     } catch (e) {
@@ -108,7 +113,10 @@ export default function ReadScreen() {
         prev?.map((r, i) => {
           if (i !== index) return r;
           const next = { ...r, ...patch };
-          return { ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) };
+          return {
+            ...next,
+            breakMinutes: breakForRules(next.startTime, next.endTime, settings.breakRules),
+          };
         }) ?? null,
     );
   }
@@ -162,7 +170,7 @@ export default function ReadScreen() {
             </ErrorText>
           ) : workplaces?.length === 0 ? (
             <ThemedText themeColor="textSecondary">
-              先に「勤務先」タブで勤務先を登録してください。
+              先に「設定」タブで勤務先を登録してください。
             </ThemedText>
           ) : (
             <>
@@ -329,9 +337,11 @@ export default function ReadScreen() {
             </View>
           </View>
           <BreakPicker
+            choices={settings.breakOptions}
             value={rows[editing].breakMinutes}
             onChange={(breakMinutes) => update(editing, { breakMinutes })}
-            legalMinutes={legalBreakMinutes(rows[editing].startTime, rows[editing].endTime)}
+            startTime={rows[editing].startTime}
+            endTime={rows[editing].endTime}
           />
           {rows[editing].note && (
             <ThemedText type="small" themeColor="textSecondary">

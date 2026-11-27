@@ -1,4 +1,4 @@
-import { breakMinuteOptions } from "@shifton/core";
+import { isBreakLegal, legalBreakMinutes } from "@shifton/core";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -15,20 +15,24 @@ const WARN = "#dc2626";
 export function BreakPicker({
   value,
   onChange,
-  legalMinutes,
+  startTime,
+  endTime,
+  choices,
   showHint = true,
 }: {
   value: number;
   onChange: (minutes: number) => void;
-  /** 労働基準法の最低休憩時間（分） */
-  legalMinutes: number;
+  /** 勤務の開始・終了（法定の最低休憩の判定に使う） */
+  startTime: string;
+  endTime: string;
+  /** ボタンに並べる分数（設定） */
+  choices: readonly number[];
   showHint?: boolean;
 }) {
   const theme = useTheme();
-  const options = breakMinuteOptions.includes(value as (typeof breakMinuteOptions)[number])
-    ? breakMinuteOptions
-    : [...breakMinuteOptions, value].sort((a, b) => a - b);
-  const tooShort = value < legalMinutes;
+  const options = choices.includes(value) ? choices : [...choices, value].sort((a, b) => a - b);
+  const legalMinutes = legalBreakMinutes(startTime, endTime);
+  const tooShort = !isBreakLegal(startTime, endTime, value);
 
   return (
     <View style={styles.field}>

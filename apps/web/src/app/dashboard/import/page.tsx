@@ -32,7 +32,7 @@ async function ImportSection() {
       <Card>
         <p>
           先に
-          <Link href="/dashboard/workplaces" className="text-sky-600 underline">
+          <Link href="/dashboard/settings" className="text-sky-600 underline">
             勤務先を登録
           </Link>
           してください。

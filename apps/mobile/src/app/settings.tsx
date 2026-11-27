@@ -10,6 +10,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } 
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ErrorText, PrimaryButton } from "@/components/form";
+import { Preferences } from "@/components/preferences";
 import { Sheet } from "@/components/sheet";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -19,8 +20,8 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useMonthShifts } from "@/lib/use-month-shifts";
 
-/** 勤務先の一覧と今月の実績。勤務先の追加はポップアップで行う */
-export default function WorkplacesScreen() {
+/** 設定：勤務先、休憩・時間帯の候補、アカウント。編集はポップアップで行う */
+export default function SettingsScreen() {
   const { session } = useAuth();
   const month = monthOf(todayIn());
   const { workplaces, shifts, error, reload } = useMonthShifts(month);
@@ -37,8 +38,9 @@ export default function WorkplacesScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
+          <ThemedText type="subtitle">設定</ThemedText>
           <View style={styles.titleRow}>
-            <ThemedText type="subtitle">勤務先</ThemedText>
+            <ThemedText type="smallBold">勤務先</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {formatMonthJa(month)}の実績
             </ThemedText>
@@ -83,6 +85,14 @@ export default function WorkplacesScreen() {
 
           <PrimaryButton title="＋ 勤務先を追加" onPress={() => setAdding(true)} />
 
+          <View style={styles.titleRow}>
+            <ThemedText type="smallBold">休憩・時間帯</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              この端末に保存
+            </ThemedText>
+          </View>
+          <Preferences />
+
           <View style={styles.account}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
               {session?.user.email}
@@ -117,7 +127,12 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "web" ? WebTabBarInset : Spacing.three,
     paddingBottom: BottomTabInset + Spacing.four,
   },
-  titleRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginTop: Spacing.two,
+  },
   flex: { flex: 1 },
   card: {
     flexDirection: "row",
@@ -128,5 +143,5 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   stats: { alignItems: "flex-end" },
-  account: { flexDirection: "row", alignItems: "center", marginTop: Spacing.four },
+  account: { flexDirection: "row", alignItems: "center", marginTop: Spacing.two },
 });

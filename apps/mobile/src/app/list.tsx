@@ -56,7 +56,7 @@ export default function ListScreen() {
 
           {workplaces?.length === 0 && (
             <ThemedText themeColor="textSecondary">
-              まずは「勤務先」タブで勤務先を登録してください。
+              まずは「設定」タブで勤務先を登録してください。
             </ThemedText>
           )}
 

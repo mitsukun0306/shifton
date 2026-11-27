@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/dashboard", label: "📅 カレンダー" },
   { href: "/dashboard/import", label: "📷 読み取り" },
-  { href: "/dashboard/workplaces", label: "🏪 勤務先" },
+  { href: "/dashboard/settings", label: "⚙️ 設定" },
 ] as const;
 
 /** ダッシュボードの画面切り替えタブ */

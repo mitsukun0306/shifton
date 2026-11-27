@@ -1,5 +1,4 @@
-import { breakMinuteOptions } from "@shifton/core";
-
+import { isBreakLegal, legalBreakMinutes } from "@shifton/core";
 /**
  * 休憩時間をボタンで選ぶ。勤務時間に応じた法定の最低休憩には「最低」の印を付け、
  * それより短い休憩を選んだときは注意を出す。
@@ -7,19 +6,24 @@ import { breakMinuteOptions } from "@shifton/core";
 export function BreakPicker({
   value,
   onChange,
-  legalMinutes,
+  startTime,
+  endTime,
+  choices,
   compact = false,
 }: {
   value: number;
   onChange: (minutes: number) => void;
-  /** 労働基準法の最低休憩時間（分） */
-  legalMinutes: number;
+  /** 勤務の開始・終了（法定の最低休憩の判定に使う） */
+  startTime: string;
+  endTime: string;
+  /** ボタンに並べる分数（設定） */
+  choices: readonly number[];
   /** 表の中など狭い場所ではセレクトボックスで表示する */
   compact?: boolean;
 }) {
-  const options = breakMinuteOptions.includes(value as (typeof breakMinuteOptions)[number])
-    ? breakMinuteOptions
-    : [...breakMinuteOptions, value].sort((a, b) => a - b);
+  const options = choices.includes(value) ? choices : [...choices, value].sort((a, b) => a - b);
+  const legalMinutes = legalBreakMinutes(startTime, endTime);
+  const tooShort = !isBreakLegal(startTime, endTime, value);
   const label = (m: number) => (m === 0 ? "なし" : `${m}分`);
 
   if (compact) {
@@ -29,7 +33,7 @@ export function BreakPicker({
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label="休憩"
         className={`rounded-md border bg-white px-2 py-1 text-slate-900 dark:bg-slate-900 dark:text-slate-100 ${
-          value < legalMinutes ? "border-red-400" : "border-slate-300 dark:border-slate-700"
+          tooShort ? "border-red-400" : "border-slate-300 dark:border-slate-700"
         }`}
       >
         {options.map((m) => (
@@ -70,10 +74,10 @@ export function BreakPicker({
           );
         })}
       </div>
-      <p className={`text-xs ${value < legalMinutes ? "text-red-600" : "text-slate-500"}`}>
+      <p className={`text-xs ${tooShort ? "text-red-600" : "text-slate-500"}`}>
         {legalMinutes === 0
           ? "6時間以下の勤務は休憩の決まりはありません"
-          : value < legalMinutes
+          : tooShort
             ? `⚠ 法律で決められた最低限の休憩（${legalMinutes}分）より短くなっています`
             : `この勤務時間では、法律で最低${legalMinutes}分の休憩が必要です（労働基準法第34条）`}
       </p>

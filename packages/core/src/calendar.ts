@@ -1,6 +1,7 @@
 import type { Shift } from "./schemas";
+import { type BreakRule, breakForRules, legalBreakRules } from "./settings";
 import { isOverlapping } from "./shift";
-import { addDays, spanMinutes } from "./time";
+import { addDays } from "./time";
 
 /** "YYYY-MM" 形式の月 */
 export type YearMonth = string;
@@ -14,7 +15,6 @@ export interface CalendarDay {
   weekday: number;
 }
 
-const TIME_PATTERN = /^\d{1,2}:\d{2}$/;
 const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /** "YYYY-MM" として正しいか */
@@ -102,13 +102,7 @@ export interface ShiftPreset {
  * 拘束時間（開始〜終了）から休憩を引いた労働時間で判定する。
  */
 export function legalBreakMinutes(startTime: string, endTime: string): number {
-  // 入力途中など時刻として読めないときは判定しない
-  if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) return 0;
-  const span = spanMinutes(startTime, endTime);
-  if (span <= 6 * 60) return 0;
-  // 45分休んでも労働時間が8時間を超えるなら60分
-  if (span - 45 <= 8 * 60) return 45;
-  return 60;
+  return breakForRules(startTime, endTime, legalBreakRules);
 }
 
 function preset(startTime: string, endTime: string): ShiftPreset {
@@ -131,6 +125,8 @@ export function suggestPresets(
   shifts: readonly Pick<Shift, "workplaceId" | "startTime" | "endTime" | "breakMinutes">[],
   workplaceId: string,
   limit = 4,
+  /** 履歴がないときの候補に入れる休憩のルール（設定） */
+  breakRules: readonly BreakRule[] = legalBreakRules,
 ): ShiftPreset[] {
   const counts = new Map<string, Required<ShiftPreset>>();
   for (const s of shifts) {
@@ -146,7 +142,12 @@ export function suggestPresets(
         count: 1,
       });
   }
-  if (counts.size === 0) return defaultShiftPresets.slice(0, limit);
+  if (counts.size === 0) {
+    return defaultShiftPresets.slice(0, limit).map((p) => ({
+      ...p,
+      breakMinutes: breakForRules(p.startTime, p.endTime, breakRules),
+    }));
+  }
   return [...counts.values()]
     .sort((a, b) => b.count - a.count || a.startTime.localeCompare(b.startTime))
     .slice(0, limit);
@@ -159,6 +160,3 @@ export function overlappingShifts<T extends Pick<Shift, "date" | "startTime" | "
 ): T[] {
   return existing.filter((s) => isOverlapping(candidate, s));
 }
-
-/** 休憩時間を選ぶボタンの候補（分） */
-export const breakMinuteOptions = [0, 15, 30, 45, 60, 90] as const;

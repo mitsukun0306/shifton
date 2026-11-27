@@ -2,13 +2,13 @@ import { createShifts, deleteShift, shiftInputSchema } from "@shifton/api";
 import {
   addDays,
   addMonths,
+  breakForRules,
   findConflicts,
   formatDateJa,
   formatDuration,
   formatMonthJa,
   formatShortTime,
   groupByDate,
-  legalBreakMinutes,
   monthGrid,
   monthOf,
   overlappingShifts,
@@ -30,6 +30,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, MaxContentWidth, Spacing, WebTabBarInset } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { useSettings } from "@/lib/settings-context";
 import { supabase } from "@/lib/supabase";
 import { useMonthShifts } from "@/lib/use-month-shifts";
 
@@ -50,6 +51,7 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(monthOf(today));
   const { workplaces, shifts, recentShifts, error, reload } = useMonthShifts(month);
 
+  const [settings] = useSettings();
   const [multi, setMulti] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -75,8 +77,9 @@ export default function CalendarScreen() {
   const selectedWorkplaceId = workplaceId ?? workplaces?.[0]?.id ?? "";
   const workplace = workplaceById.get(selectedWorkplaceId);
   const presets = useMemo(
-    () => suggestPresets(recentShifts, selectedWorkplaceId),
-    [recentShifts, selectedWorkplaceId],
+    () =>
+      suggestPresets(recentShifts, selectedWorkplaceId, settings.presetCount, settings.breakRules),
+    [recentShifts, selectedWorkplaceId, settings],
   );
 
   function changeMonth(next: string) {
@@ -212,7 +215,10 @@ export default function CalendarScreen() {
   /** 開始・終了を変えたら、休憩を法定の最低時間に合わせ直す（あとから変更可） */
   function changeTime(patch: Partial<Pick<ShiftPreset, "startTime" | "endTime">>) {
     const next = { ...custom, ...patch };
-    setCustomDraft({ ...next, breakMinutes: legalBreakMinutes(next.startTime, next.endTime) });
+    setCustomDraft({
+      ...next,
+      breakMinutes: breakForRules(next.startTime, next.endTime, settings.breakRules),
+    });
   }
 
   return (
@@ -224,7 +230,7 @@ export default function CalendarScreen() {
 
           {workplaces?.length === 0 && (
             <ThemedText themeColor="textSecondary">
-              先に「勤務先」タブで勤務先を登録してください。
+              先に「設定」タブで勤務先を登録してください。
             </ThemedText>
           )}
 
@@ -550,9 +556,11 @@ export default function CalendarScreen() {
                       </View>
                     </View>
                     <BreakPicker
+                      choices={settings.breakOptions}
                       value={custom.breakMinutes}
                       onChange={(breakMinutes) => setCustomDraft({ ...custom, breakMinutes })}
-                      legalMinutes={legalBreakMinutes(custom.startTime, custom.endTime)}
+                      startTime={custom.startTime}
+                      endTime={custom.endTime}
                     />
                     <TextField label="メモ（任意）" value={note} onChangeText={setNote} />
                     {conflictDays(custom).length > 0 && (

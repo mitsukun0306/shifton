@@ -14,18 +14,19 @@ import { signOut } from "@/app/actions/auth";
 import { Card } from "@/components/ui";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AddWorkplaceButton } from "../forms";
+import { Preferences } from "./preferences";
 
-export default function WorkplacesPage() {
+export default function SettingsPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-2 py-4 sm:px-4 sm:py-6">
       <Suspense fallback={<p className="text-slate-500">読み込み中…</p>}>
-        <Workplaces />
+        <Settings />
       </Suspense>
     </main>
   );
 }
 
-async function Workplaces() {
+async function Settings() {
   await connection();
   const current = await getCurrentUser();
   if (!current) redirect("/login");
@@ -46,9 +47,10 @@ async function Workplaces() {
 
   return (
     <div className="flex flex-col gap-4">
+      <h1 className="px-2 text-xl font-bold">設定</h1>
       <Card>
         <div className="mb-4 flex items-center justify-between gap-2">
-          <h1 className="text-lg font-bold">勤務先</h1>
+          <h2 className="text-lg font-bold">勤務先</h2>
           <span className="text-sm text-slate-500">{formatMonthJa(month)}の実績</span>
         </div>
         {workplaces.length === 0 ? (
@@ -84,6 +86,14 @@ async function Workplaces() {
         )}
         <AddWorkplaceButton />
       </Card>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="px-4 pt-4 pb-1">
+          <h2 className="text-lg font-bold">休憩・時間帯</h2>
+          <p className="text-xs text-slate-500">このブラウザに保存されます</p>
+        </div>
+        <Preferences />
+      </div>
 
       <div className="flex items-center justify-between px-2 text-sm text-slate-500">
         <span>{user.email} でログイン中</span>
