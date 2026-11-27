@@ -1,22 +1,26 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createShifts } from "@shifton/api";
-import type { ShiftCandidate } from "@shifton/core";
+import { breakForRules, formatDateJa, type ShiftCandidate } from "@shifton/core";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BreakPicker } from "@/components/break-picker";
 import { ErrorText, PrimaryButton, TextField } from "@/components/form";
+import { PickerField } from "@/components/picker-field";
+import { Sheet } from "@/components/sheet";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { BottomTabInset, MaxContentWidth, Spacing, WebTabBarInset } from "@/constants/theme";
 import { useAuth } from "@/lib/auth-context";
+import { useSettings } from "@/lib/settings-context";
 import { isShiftReaderConfigured, readShiftImage } from "@/lib/shift-reader";
 import { supabase } from "@/lib/supabase";
 import { useShiftData } from "@/lib/use-shift-data";
 
-type Row = ShiftCandidate & { include: boolean; breakText: string };
+type Row = ShiftCandidate & { include: boolean };
 type Asset = { uri: string; width: number; height: number };
 
 const NAME_KEY = "shifton:nameOnSheet";
@@ -25,6 +29,7 @@ export default function ReadScreen() {
   const { session } = useAuth();
   const { workplaces } = useShiftData();
   const [asset, setAsset] = useState<Asset>();
+  const [settings] = useSettings();
   const [nameOnSheet, setNameOnSheet] = useState("");
   const [workplaceId, setWorkplaceId] = useState<string>();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -33,6 +38,8 @@ export default function ReadScreen() {
   const [message, setMessage] = useState<string>();
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** 編集ポップアップで開いている行の番号 */
+  const [editing, setEditing] = useState<number>();
 
   const selectedWorkplaceId = workplaceId ?? workplaces?.[0]?.id;
 
@@ -78,7 +85,15 @@ export default function ReadScreen() {
       });
       setWarnings(result.warnings);
       setRows(
-        result.candidates.map((c) => ({ ...c, include: true, breakText: String(c.breakMinutes) })),
+        result.candidates.map((c) => ({
+          ...c,
+          include: true,
+          // シフト表に休憩が書かれていなくても、法律で必要な最低限の休憩は入れておく
+          breakMinutes: Math.max(
+            c.breakMinutes,
+            breakForRules(c.startTime, c.endTime, settings.breakRules),
+          ),
+        })),
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -89,6 +104,21 @@ export default function ReadScreen() {
 
   function update(index: number, patch: Partial<Row>) {
     setRows((prev) => prev?.map((r, i) => (i === index ? { ...r, ...patch } : r)) ?? null);
+  }
+
+  /** 開始・終了を変えたら、休憩を法定の最低時間に合わせ直す（あとから変更可） */
+  function updateTime(index: number, patch: Partial<Pick<Row, "startTime" | "endTime">>) {
+    setRows(
+      (prev) =>
+        prev?.map((r, i) => {
+          if (i !== index) return r;
+          const next = { ...r, ...patch };
+          return {
+            ...next,
+            breakMinutes: breakForRules(next.startTime, next.endTime, settings.breakRules),
+          };
+        }) ?? null,
+    );
   }
 
   async function save() {
@@ -104,12 +134,12 @@ export default function ReadScreen() {
           date: r.date.trim(),
           startTime: r.startTime.trim(),
           endTime: r.endTime.trim(),
-          breakMinutes: r.breakText || 0,
+          breakMinutes: r.breakMinutes,
           note: r.note,
         })),
         "image",
       );
-      setMessage(`${created.length}件のシフトを登録しました。「シフト」タブで確認できます`);
+      setMessage(`${created.length}件のシフトを登録しました。「カレンダー」タブで確認できます`);
       setRows(null);
       setAsset(undefined);
     } catch (e) {
@@ -133,14 +163,14 @@ export default function ReadScreen() {
             のスクショから、あなたのシフトを読み取ります。登録前に確認・修正できます。
           </ThemedText>
 
-          {!isShiftReaderConfigured ? (
+          {rows ? null : !isShiftReaderConfigured ? (
             <ErrorText>
               読み取り機能が未設定です。apps/mobile/.env に EXPO_PUBLIC_API_BASE_URL
               を設定してください（docs/shift-reader-setup.md 参照）
             </ErrorText>
           ) : workplaces?.length === 0 ? (
             <ThemedText themeColor="textSecondary">
-              先に「追加」タブで勤務先を登録してください。
+              先に「設定」タブで勤務先を登録してください。
             </ThemedText>
           ) : (
             <>
@@ -223,53 +253,38 @@ export default function ReadScreen() {
                   // biome-ignore lint/suspicious/noArrayIndexKey: 行は編集中に並び替えない
                   key={i}
                   type="backgroundElement"
-                  style={[styles.card, r.uncertain && styles.uncertain]}
+                  style={[
+                    styles.card,
+                    r.uncertain && styles.uncertain,
+                    !r.include && styles.dimmed,
+                  ]}
                 >
-                  <View style={styles.cardHeader}>
+                  <Pressable
+                    style={styles.flex}
+                    accessibilityRole="button"
+                    accessibilityHint="タップして直す"
+                    onPress={() => setEditing(i)}
+                  >
                     <ThemedText type="smallBold">
-                      {r.uncertain ? "要確認 " : ""}
-                      {i + 1}件目
+                      {r.uncertain ? "⚠要確認 " : ""}
+                      {formatDateJa(r.date)}
                     </ThemedText>
-                    <Switch
-                      value={r.include}
-                      onValueChange={(include) => update(i, { include })}
-                      accessibilityLabel="このシフトを登録する"
-                    />
-                  </View>
-                  <TextField
-                    label="日付"
-                    value={r.date}
-                    onChangeText={(date) => update(i, { date })}
+                    <ThemedText>
+                      {r.startTime}〜{r.endTime}
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {"  "}
+                        {r.breakMinutes > 0 ? `休憩${r.breakMinutes}分` : "休憩なし"}
+                      </ThemedText>
+                    </ThemedText>
+                    <ThemedText type="small" style={styles.editLink}>
+                      ✎ タップして直す
+                    </ThemedText>
+                  </Pressable>
+                  <Switch
+                    value={r.include}
+                    onValueChange={(include) => update(i, { include })}
+                    accessibilityLabel="このシフトを登録する"
                   />
-                  <View style={styles.row}>
-                    <View style={styles.flex}>
-                      <TextField
-                        label="開始"
-                        value={r.startTime}
-                        onChangeText={(startTime) => update(i, { startTime })}
-                      />
-                    </View>
-                    <View style={styles.flex}>
-                      <TextField
-                        label="終了"
-                        value={r.endTime}
-                        onChangeText={(endTime) => update(i, { endTime })}
-                      />
-                    </View>
-                    <View style={styles.flex}>
-                      <TextField
-                        label="休憩(分)"
-                        value={r.breakText}
-                        onChangeText={(breakText) => update(i, { breakText })}
-                        keyboardType="number-pad"
-                      />
-                    </View>
-                  </View>
-                  {r.note && (
-                    <ThemedText type="small" themeColor="textSecondary">
-                      メモ: {r.note}
-                    </ThemedText>
-                  )}
                 </ThemedView>
               ))}
               {rows.length > 0 && (
@@ -279,10 +294,63 @@ export default function ReadScreen() {
                   loading={saving}
                 />
               )}
+              <Pressable
+                onPress={() => {
+                  setRows(null);
+                  setWarnings([]);
+                }}
+                hitSlop={8}
+              >
+                <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+                  別の画像で読み取り直す
+                </ThemedText>
+              </Pressable>
             </ThemedView>
           )}
         </ScrollView>
       </SafeAreaView>
+
+      {rows && editing !== undefined && rows[editing] && (
+        <Sheet open onClose={() => setEditing(undefined)} title={`${editing + 1}件目を直す`}>
+          <PickerField
+            label="日付"
+            mode="date"
+            value={rows[editing].date}
+            onChange={(date) => update(editing, { date })}
+          />
+          <View style={styles.row}>
+            <View style={styles.flex}>
+              <PickerField
+                label="開始"
+                mode="time"
+                value={rows[editing].startTime}
+                onChange={(startTime) => updateTime(editing, { startTime })}
+              />
+            </View>
+            <View style={styles.flex}>
+              <PickerField
+                label="終了"
+                mode="time"
+                value={rows[editing].endTime}
+                onChange={(endTime) => updateTime(editing, { endTime })}
+              />
+            </View>
+          </View>
+          <BreakPicker
+            choices={settings.breakOptions}
+            value={rows[editing].breakMinutes}
+            onChange={(breakMinutes) => update(editing, { breakMinutes })}
+            startTime={rows[editing].startTime}
+            endTime={rows[editing].endTime}
+          />
+          {rows[editing].note && (
+            <ThemedText type="small" themeColor="textSecondary">
+              メモ: {rows[editing].note}
+            </ThemedText>
+          )}
+          <PrimaryButton title="OK" onPress={() => setEditing(undefined)} />
+        </Sheet>
+      )}
     </ThemedView>
   );
 }
@@ -298,7 +366,7 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: "row", gap: Spacing.two },
   flex: { flex: 1 },
-  preview: { width: "100%", height: 240, borderRadius: Spacing.two },
+  preview: { width: "100%", height: 160, borderRadius: Spacing.two },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
   chip: {
     borderWidth: 2,
@@ -309,7 +377,15 @@ const styles = StyleSheet.create({
   chipTextSelected: { color: "#fff", fontWeight: 700 },
   section: { gap: Spacing.three, marginTop: Spacing.three },
   warning: { color: "#b45309" },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    gap: Spacing.two,
+  },
+  dimmed: { opacity: 0.5 },
+  editLink: { color: "#0284c7" },
+  center: { textAlign: "center" },
   uncertain: { borderWidth: 2, borderColor: "#f59e0b" },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
 });

@@ -1,13 +1,14 @@
 "use server";
 
 import {
-  createShift,
   createShifts,
   createWorkplace,
   deleteShift,
+  saveSettings,
   shiftInputSchema,
   workplaceInputSchema,
 } from "@shifton/api";
+import type { AppSettings } from "@shifton/core";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -46,34 +47,36 @@ export async function createWorkplaceAction(
   return { ok: true };
 }
 
-export async function createShiftAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+/** カレンダーで選んだ日に、同じ時間帯のシフトをまとめて登録する */
+export async function addShiftsAction(
+  inputs: Array<{
+    workplaceId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    breakMinutes: number;
+    note?: string;
+  }>,
+): Promise<ImportState> {
   const { supabase } = await requireUser();
-  const parsed = shiftInputSchema.safeParse({
-    workplaceId: formData.get("workplaceId"),
-    date: formData.get("date"),
-    startTime: formData.get("startTime"),
-    endTime: formData.get("endTime"),
-    breakMinutes: formData.get("breakMinutes") || 0,
-    note: formData.get("note") || undefined,
-  });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
-
+  if (inputs.length === 0) return { error: "日付を選んでください" };
+  for (const input of inputs) {
+    const parsed = shiftInputSchema.safeParse(input);
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  }
   try {
-    await createShift(supabase, parsed.data);
+    const created = await createShifts(supabase, inputs, "manual");
+    refresh();
+    return { count: created.length };
   } catch (e) {
     return { error: errorMessage("シフトを登録できませんでした", e) };
   }
-  refresh();
-  return { ok: true };
 }
 
-export async function deleteShiftAction(formData: FormData) {
+/** シフトを1件削除する（カレンダーから呼ぶ） */
+export async function removeShiftAction(id: string): Promise<void> {
   const { supabase } = await requireUser();
-  const id = String(formData.get("id") ?? "");
-  if (id) await deleteShift(supabase, id);
+  await deleteShift(supabase, id);
   refresh();
 }
 
@@ -103,4 +106,16 @@ export async function importShiftsAction(
   } catch (e) {
     return { error: errorMessage("シフトを登録できませんでした", e) };
   }
+}
+
+/** 設定をアカウントに保存する（同じアカウントならどの端末でも同じ設定になる） */
+export async function saveSettingsAction(settings: AppSettings): Promise<{ error?: string }> {
+  const { supabase } = await requireUser();
+  try {
+    await saveSettings(supabase, settings);
+  } catch (e) {
+    return { error: errorMessage("設定を保存できませんでした", e) };
+  }
+  refresh();
+  return {};
 }

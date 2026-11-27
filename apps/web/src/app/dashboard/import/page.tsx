@@ -3,16 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Card } from "@/components/ui";
+import { fetchSettingsOrDefault } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { ImportForm } from "./import-form";
 
 export default function ImportPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <Link href="/dashboard" className="text-sm text-sky-600 underline">
-        ← シフト一覧に戻る
-      </Link>
-      <h1 className="mt-4 mb-2 text-xl font-bold">写真・スクショからシフトを読み取る</h1>
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+      <h1 className="mb-2 text-xl font-bold">写真・スクショからシフトを読み取る</h1>
       <p className="mb-6 text-sm text-slate-500">
         紙のシフト表の写真や、シフトアプリ・LINE
         のスクリーンショットから、あなたのシフトを読み取ります。
@@ -28,14 +26,17 @@ export default function ImportPage() {
 async function ImportSection() {
   const current = await getCurrentUser();
   if (!current) redirect("/login");
-  const workplaces = await fetchWorkplaces(current.supabase);
+  const [workplaces, settings] = await Promise.all([
+    fetchWorkplaces(current.supabase),
+    fetchSettingsOrDefault(current.supabase),
+  ]);
 
   if (workplaces.length === 0) {
     return (
       <Card>
         <p>
           先に
-          <Link href="/dashboard" className="text-sky-600 underline">
+          <Link href="/dashboard/settings" className="text-sky-600 underline">
             勤務先を登録
           </Link>
           してください。
@@ -43,5 +44,5 @@ async function ImportSection() {
       </Card>
     );
   }
-  return <ImportForm workplaces={workplaces} />;
+  return <ImportForm workplaces={workplaces} settings={settings.settings} />;
 }

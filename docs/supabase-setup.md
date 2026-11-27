@@ -35,9 +35,11 @@ Supabase は「データベース（PostgreSQL）」と「ログイン機能」�
 1. 左のメニューから **SQL Editor** を開きます。
 2. **New query**（または「+」）で空のエディタを開きます。
 3. このリポジトリの次のファイルの中身を**すべてコピーして貼り付け**、右下の **Run** を押します。
-   - `supabase/migrations/20261126000000_init.sql`
+   ファイルが複数あるときは、上から順に1つずつ（貼り付け → Run）行います。
+   - `supabase/migrations/20261126000000_init.sql`（勤務先・シフト）
+   - `supabase/migrations/20261127000000_user_settings.sql`（休憩ルールなどの設定。全端末で同期するため）
 4. 「Success. No rows returned」と表示されれば成功です。
-5. 左メニューの **Table Editor** を開き、`workplaces`（勤務先）と `shifts`（シフト）の2つのテーブルがあれば完了です。
+5. 左メニューの **Table Editor** を開き、`workplaces`（勤務先）・`shifts`（シフト）・`user_settings`（設定）の3つのテーブルがあれば完了です。
 
 > 今後テーブルを変更するときは `supabase/migrations/` に新しいファイルが増えます。
 > そのときは、まだ実行していないファイルを日付の古い順に実行してください。

@@ -5,6 +5,7 @@ import AppTabs from "@/components/app-tabs";
 import { LoginScreen } from "@/components/login-screen";
 import { SetupRequired } from "@/components/setup-required";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { SettingsProvider } from "@/lib/settings-context";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export default function RootLayout() {
@@ -12,7 +13,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <Gate />
+        <SettingsProvider>
+          <Gate />
+        </SettingsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

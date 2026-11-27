@@ -20,13 +20,16 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton>シフト</TabButton>
+            <TabButton>カレンダー</TabButton>
+          </TabTrigger>
+          <TabTrigger name="list" href="/list" asChild>
+            <TabButton>予定</TabButton>
           </TabTrigger>
           <TabTrigger name="read" href="/read" asChild>
             <TabButton>読み取り</TabButton>
           </TabTrigger>
-          <TabTrigger name="add" href="/add" asChild>
-            <TabButton>追加</TabButton>
+          <TabTrigger name="settings" href="/settings" asChild>
+            <TabButton>設定</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>

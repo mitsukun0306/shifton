@@ -37,11 +37,19 @@ export type ShiftRow = {
   updated_at: string;
 };
 
+export type UserSettingsRow = {
+  user_id: string;
+  /** packages/core の AppSettings を JSON で保存する */
+  settings: unknown;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
       workplaces: Table<WorkplaceRow, "name">;
       shifts: Table<ShiftRow, "workplace_id" | "date" | "start_time" | "end_time">;
+      user_settings: Table<UserSettingsRow, "user_id">;
     };
     Views: Record<never, never>;
     Functions: Record<never, never>;
