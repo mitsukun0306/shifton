@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type AppSettings,
   type BreakRule,
   breakForRules,
   defaultSettings,
@@ -9,10 +10,10 @@ import {
   isLegalBreakRules,
   legalBreakRules,
 } from "@shifton/core";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useOptimistic, useState, useTransition } from "react";
 import { Sheet } from "@/components/sheet";
 import { Alert, Button } from "@/components/ui";
-import { useSettings } from "@/lib/settings";
+import { saveSettingsAction } from "../actions";
 
 const HOUR_CHOICES = Array.from({ length: 24 }, (_, i) => (i + 1) * 30).filter((m) => m <= 12 * 60);
 const BREAK_CHOICES = [0, 10, 15, 20, 30, 45, 60, 75, 90, 120];
@@ -55,8 +56,27 @@ const selectClass =
   "rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
 
 /** 休憩・時間帯の候補などの設定（このブラウザに保存） */
-export function Preferences() {
-  const [settings, save] = useSettings();
+export function Preferences({
+  settings: saved,
+  loadError,
+}: {
+  settings: AppSettings;
+  /** 設定を読み込めなかったときの理由 */
+  loadError?: string;
+}) {
+  // 保存が終わる前から画面に反映し、失敗したら元に戻す
+  const [settings, setOptimistic] = useOptimistic(saved);
+  const [saveError, setSaveError] = useState<string>();
+  const [, startTransition] = useTransition();
+
+  function save(next: AppSettings) {
+    setSaveError(undefined);
+    startTransition(async () => {
+      setOptimistic(next);
+      const result = await saveSettingsAction(next);
+      if (result.error) setSaveError(result.error);
+    });
+  }
   const [editing, setEditing] = useState<"rules" | "options" | "count">();
   const [draftRules, setDraftRules] = useState<BreakRule[]>([]);
 
@@ -73,6 +93,15 @@ export function Preferences() {
 
   return (
     <>
+      {(loadError || saveError) && (
+        <div className="px-4 pb-2">
+          <Alert kind="error">
+            設定を{saveError ? "保存" : "読み込み"}できませんでした。Supabase に設定用のテーブル（
+            supabase/migrations/20261127000000_user_settings.sql）が作られているか確認してください。
+            （{saveError ?? loadError}）
+          </Alert>
+        </div>
+      )}
       <div className="divide-y divide-slate-200 dark:divide-slate-800">
         <SettingRow
           label="休憩の自動入力"

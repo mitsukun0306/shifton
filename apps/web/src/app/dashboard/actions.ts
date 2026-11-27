@@ -4,9 +4,11 @@ import {
   createShifts,
   createWorkplace,
   deleteShift,
+  saveSettings,
   shiftInputSchema,
   workplaceInputSchema,
 } from "@shifton/api";
+import type { AppSettings } from "@shifton/core";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -104,4 +106,16 @@ export async function importShiftsAction(
   } catch (e) {
     return { error: errorMessage("シフトを登録できませんでした", e) };
   }
+}
+
+/** 設定をアカウントに保存する（同じアカウントならどの端末でも同じ設定になる） */
+export async function saveSettingsAction(settings: AppSettings): Promise<{ error?: string }> {
+  const { supabase } = await requireUser();
+  try {
+    await saveSettings(supabase, settings);
+  } catch (e) {
+    return { error: errorMessage("設定を保存できませんでした", e) };
+  }
+  refresh();
+  return {};
 }

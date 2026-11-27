@@ -122,7 +122,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 
 /** 休憩・時間帯の候補などの設定（この端末に保存） */
 export function Preferences() {
-  const [settings, save] = useSettings();
+  const [settings, save, settingsError] = useSettings();
   const [editing, setEditing] = useState<"rules" | "options" | "count">();
   const [draftRules, setDraftRules] = useState<BreakRule[]>([]);
 
@@ -144,6 +144,11 @@ export function Preferences() {
 
   return (
     <>
+      {settingsError && (
+        <ErrorText>
+          {`設定を同期できませんでした。Supabase に設定用のテーブル（user_settings）が作られているか確認してください。（${settingsError}）`}
+        </ErrorText>
+      )}
       <ThemedView type="backgroundElement" style={styles.group}>
         <SettingRow
           label="休憩の自動入力"

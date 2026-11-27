@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Card } from "@/components/ui";
+import { fetchSettingsOrDefault } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { ImportForm } from "./import-form";
 
@@ -25,7 +26,10 @@ export default function ImportPage() {
 async function ImportSection() {
   const current = await getCurrentUser();
   if (!current) redirect("/login");
-  const workplaces = await fetchWorkplaces(current.supabase);
+  const [workplaces, settings] = await Promise.all([
+    fetchWorkplaces(current.supabase),
+    fetchSettingsOrDefault(current.supabase),
+  ]);
 
   if (workplaces.length === 0) {
     return (
@@ -40,5 +44,5 @@ async function ImportSection() {
       </Card>
     );
   }
-  return <ImportForm workplaces={workplaces} />;
+  return <ImportForm workplaces={workplaces} settings={settings.settings} />;
 }

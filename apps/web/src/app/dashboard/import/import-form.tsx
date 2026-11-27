@@ -1,12 +1,11 @@
 "use client";
 
-import type { NormalizedExtraction, ShiftCandidate, Workplace } from "@shifton/core";
+import type { AppSettings, NormalizedExtraction, ShiftCandidate, Workplace } from "@shifton/core";
 import { breakForRules, formatDateJa } from "@shifton/core";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BreakPicker } from "@/components/break-picker";
 import { Alert, Button, Card, Field } from "@/components/ui";
-import { useSettings } from "@/lib/settings";
 import { importShiftsAction } from "../actions";
 import { resizeImage } from "./resize-image";
 
@@ -17,10 +16,16 @@ const NAME_KEY = "shifton:nameOnSheet";
 const inputClass =
   "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
 
-export function ImportForm({ workplaces }: { workplaces: Workplace[] }) {
+export function ImportForm({
+  workplaces,
+  settings,
+}: {
+  workplaces: Workplace[];
+  /** アカウントに保存された設定（休憩ルールなど） */
+  settings: AppSettings;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>();
-  const [settings] = useSettings();
   const [nameOnSheet, setNameOnSheet] = useState("");
   const [workplaceId, setWorkplaceId] = useState(workplaces[0]?.id ?? "");
   const [rows, setRows] = useState<Row[] | null>(null);

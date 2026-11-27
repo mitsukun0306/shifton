@@ -12,6 +12,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
 import { Card } from "@/components/ui";
+import { fetchSettingsOrDefault } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { AddWorkplaceButton } from "../forms";
 import { Preferences } from "./preferences";
@@ -34,9 +35,10 @@ async function Settings() {
 
   const month = monthOf(todayIn());
   const range = gridRange(month);
-  const [workplaces, shifts] = await Promise.all([
+  const [workplaces, shifts, settings] = await Promise.all([
     fetchWorkplaces(supabase),
     fetchShifts(supabase, range),
+    fetchSettingsOrDefault(supabase),
   ]);
   const summaries = new Map(
     summarizeByWorkplace(
@@ -90,9 +92,9 @@ async function Settings() {
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="px-4 pt-4 pb-1">
           <h2 className="text-lg font-bold">休憩・時間帯</h2>
-          <p className="text-xs text-slate-500">このブラウザに保存されます</p>
+          <p className="text-xs text-slate-500">同じアカウントならスマホ・パソコンで共通です</p>
         </div>
-        <Preferences />
+        <Preferences settings={settings.settings} loadError={settings.error} />
       </div>
 
       <div className="flex items-center justify-between px-2 text-sm text-slate-500">

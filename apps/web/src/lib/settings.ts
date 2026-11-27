@@ -1,55 +1,18 @@
-"use client";
+import { fetchSettings, type ShiftonClient } from "@shifton/api";
+import { type AppSettings, defaultSettings } from "@shifton/core";
 
-import { type AppSettings, defaultSettings, parseSettings } from "@shifton/core";
-import { useCallback, useSyncExternalStore } from "react";
-
-/** 設定はこのブラウザの localStorage に保存する */
-const KEY = "shifton:settings";
-const listeners = new Set<() => void>();
-let cachedRaw: string | null | undefined;
-let cached: AppSettings = defaultSettings;
-
-function read(): AppSettings {
-  let raw: string | null = null;
+/**
+ * アカウントの設定を読み込む。設定用のテーブルがまだ作られていないなどで読めないときは、
+ * 画面が止まらないよう既定値を使い、理由を error で返す。
+ */
+export async function fetchSettingsOrDefault(
+  client: ShiftonClient,
+): Promise<{ settings: AppSettings; error?: string }> {
   try {
-    raw = window.localStorage.getItem(KEY);
-  } catch {
-    // プライベートブラウズなどで使えないときは既定値
+    return { settings: await fetchSettings(client) };
+  } catch (e) {
+    const message =
+      e instanceof Error ? e.message : String((e as { message?: string }).message ?? e);
+    return { settings: defaultSettings, error: message };
   }
-  if (raw !== cachedRaw) {
-    cachedRaw = raw;
-    try {
-      cached = raw ? parseSettings(JSON.parse(raw)) : defaultSettings;
-    } catch {
-      cached = defaultSettings;
-    }
-  }
-  return cached;
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  // 別のタブで変えたときも反映する
-  const onStorage = (e: StorageEvent) => e.key === KEY && listener();
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-/** アプリの設定を読み書きする */
-export function useSettings(): [AppSettings, (next: AppSettings) => void] {
-  const settings = useSyncExternalStore(subscribe, read, () => defaultSettings);
-  const save = useCallback((next: AppSettings) => {
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      // 保存できなくても、この画面の間は反映する
-      cachedRaw = JSON.stringify(next);
-      cached = next;
-    }
-    for (const l of listeners) l();
-  }, []);
-  return [settings, save];
 }

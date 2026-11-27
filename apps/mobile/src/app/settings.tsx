@@ -88,7 +88,7 @@ export default function SettingsScreen() {
           <View style={styles.titleRow}>
             <ThemedText type="smallBold">休憩・時間帯</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              この端末に保存
+              スマホ・パソコンで共通
             </ThemedText>
           </View>
           <Preferences />

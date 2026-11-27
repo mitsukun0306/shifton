@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type AppSettings,
   addDays,
   addMonths,
   breakForRules,
@@ -26,7 +27,6 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { BreakPicker } from "@/components/break-picker";
 import { Sheet } from "@/components/sheet";
 import { Alert, Button, Field } from "@/components/ui";
-import { useSettings } from "@/lib/settings";
 import { addShiftsAction, removeShiftAction } from "./actions";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -44,6 +44,7 @@ export function ShiftCalendar({
   workplaces,
   shifts,
   recentShifts,
+  settings,
 }: {
   month: YearMonth;
   today: string;
@@ -52,12 +53,13 @@ export function ShiftCalendar({
   shifts: Shift[];
   /** よく入る時間帯を提案するための、最近のシフト */
   recentShifts: Shift[];
+  /** アカウントに保存された設定（休憩ルールなど） */
+  settings: AppSettings;
 }) {
   const weeks = useMemo(() => monthGrid(month), [month]);
   const byDate = useMemo(() => groupByDate(shifts), [shifts]);
   const workplaceById = useMemo(() => new Map(workplaces.map((wp) => [wp.id, wp])), [workplaces]);
 
-  const [settings] = useSettings();
   const [multi, setMulti] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);

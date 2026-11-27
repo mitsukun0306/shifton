@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { Card } from "@/components/ui";
+import { fetchSettingsOrDefault } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { WorkplaceForm } from "./forms";
 import { ShiftCalendar } from "./shift-calendar";
@@ -33,12 +34,13 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
   const month = isYearMonth(requested) ? requested : monthOf(today);
   const range = gridRange(month);
   const lookbackFrom = addDays(today, -PRESET_LOOKBACK_DAYS);
-  const [workplaces, fetched] = await Promise.all([
+  const [workplaces, fetched, settings] = await Promise.all([
     fetchWorkplaces(supabase),
     fetchShifts(supabase, {
       from: [lookbackFrom, range.from].sort()[0] ?? range.from,
       to: [today, range.to].sort()[1] ?? range.to,
     }),
+    fetchSettingsOrDefault(supabase),
   ]);
   const shifts = fetched.filter((s) => s.date >= range.from && s.date <= range.to);
   const recentShifts = fetched.filter((s) => s.date >= lookbackFrom && s.date <= today);
@@ -63,6 +65,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
         workplaces={workplaces}
         shifts={shifts}
         recentShifts={recentShifts}
+        settings={settings.settings}
       />
     </Card>
   );
