@@ -1,2 +1,5 @@
 # Windows のバッチファイルは CRLF で保存する（LF だと誤動作することがある）
 *.cmd text eol=crlf
+
+# PowerShell スクリプトも Windows で使うので CRLF で保存する
+*.ps1 text eol=crlf
